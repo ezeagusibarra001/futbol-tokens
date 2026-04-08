@@ -1,0 +1,3 @@
+- [ ] Proyecto Node.js con TypeScript creado.
+- [ ] Estructura básica generada.
+- [ ] Configuración inicial lista.
