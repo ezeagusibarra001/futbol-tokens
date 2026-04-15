@@ -2,9 +2,9 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "feature-*" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "feature-*" ]
 
 jobs:
   build:
@@ -30,3 +30,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+    
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORG: ${{ secrets.ORG_KEY }}
