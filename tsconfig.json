@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "jest.config.ts"],
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
