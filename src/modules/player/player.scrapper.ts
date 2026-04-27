@@ -1,7 +1,6 @@
 import { Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { IPlayer } from "./player.types";
 import { Player } from "./player.model";
 
 puppeteer.use(StealthPlugin());
@@ -65,7 +64,7 @@ const findLink = async (page: Page, leagueName: string, querySelector: string) =
   }, leagueName, querySelector);
 };
 
-export const getPlayersFromTeamAndLeague = async (leagueName: string, team: string) => {
+export const getPlayersFromTeamAndLeague = async (leagueName: string, team: string, position?: string) => {
   const { browser, page } = await preActions();
   // 🔥 abrir dropdown de torneos (sin usar ID)
   await page.waitForFunction(() => {
@@ -228,7 +227,13 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
     }
   };
 
-  const players = jugadores.map(j => new Player(j));
+  const players = jugadores.reduce((acc, j) => {
+    if (position && j.position?.toLowerCase() !== position.toLowerCase()) {
+      return acc;
+    }
+    acc.push(new Player(j));
+    return acc;
+  }, [] as Player[]);
 
   // Defensive
   await cambiarTipoEstadistica("defensive", "tackles");

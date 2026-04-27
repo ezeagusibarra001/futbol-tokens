@@ -1,6 +1,6 @@
 
 export interface IPlayer {
-  nombre: string;
+  name: string;
   position: string;
   goals: number;
   assists: number;
@@ -12,7 +12,7 @@ export interface IPlayer {
 }
 
 export class Player implements IPlayer {
-  nombre: string;
+  name: string;
   position: string;
   goals: number;
   assists: number;
@@ -23,7 +23,7 @@ export class Player implements IPlayer {
   rating: number;
 
   constructor(data: Partial<Player>) {
-    this.nombre = data.nombre ?? "";
+    this.name = data.name ?? "";
     this.position = data.position ?? "";
     this.goals = data.goals ?? 0;
     this.assists = data.assists ?? 0;
