@@ -17,18 +17,21 @@ describe('player.service - getPlayers', () => {
         ];
         (getPlayersFromTeamAndLeague as jest.Mock).mockResolvedValue(mockPlayers);
         const result = await getPlayers('some_league', 'some_team');
-        expect(getPlayersFromTeamAndLeague).toHaveBeenCalledWith('some_league', 'some_team', undefined);
+        expect(getPlayersFromTeamAndLeague).toHaveBeenCalledWith('some_league', 'some_team');
         expect(result).toEqual(mockPlayers);
     });
 
-    it('should pass position to scrapper if provided', async () => {
+    it('with position', async () => {
         const mockPlayers = [
             { name: 'Player 1', position: 'Forward' },
         ];
-        (getPlayersFromTeamAndLeague as jest.Mock).mockResolvedValue(mockPlayers);
+        (getPlayersFromTeamAndLeague as jest.Mock).mockResolvedValue([
+            { name: 'Player 1', position: 'Forward' },
+            { name: 'Player 2', position: 'Midfielder' },
+        ]);
         const result = await getPlayers('some_league', 'some_team', 'Forward');
-        expect(getPlayersFromTeamAndLeague).toHaveBeenCalledWith('some_league', 'some_team', 'Forward');
+        expect(getPlayersFromTeamAndLeague).toHaveBeenCalledWith('some_league', 'some_team');
         expect(result).toEqual(mockPlayers);
-});
+    });
 });
 
