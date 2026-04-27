@@ -65,7 +65,7 @@ const findLink = async (page: Page, leagueName: string, querySelector: string) =
   }, leagueName, querySelector);
 };
 
-export const getPlayersFromTeamAndLeague = async (leagueName: string, team: string, position?: string) => {
+export const getPlayersFromTeamAndLeague = async (leagueName: string, team: string) => {
   const { browser, page } = await preActions();
   await page.waitForFunction(() => {
     return Array.from(document.querySelectorAll("a, button"))
