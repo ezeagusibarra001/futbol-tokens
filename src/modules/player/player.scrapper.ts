@@ -2,6 +2,7 @@ import { Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { Player } from "./player.model";
+import { PlayerDTO, PlayerStatKey  } from "./dto/player.dto";
 
 puppeteer.use(StealthPlugin());
 
@@ -66,7 +67,6 @@ const findLink = async (page: Page, leagueName: string, querySelector: string) =
 
 export const getPlayersFromTeamAndLeague = async (leagueName: string, team: string, position?: string) => {
   const { browser, page } = await preActions();
-  // 🔥 abrir dropdown de torneos (sin usar ID)
   await page.waitForFunction(() => {
     return Array.from(document.querySelectorAll("a, button"))
       .some(el => el.textContent?.toLowerCase().includes("tournament"));
@@ -79,12 +79,11 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
     if (btn) (btn as HTMLElement).click();
   });
 
-  // 🔥 esperar que el dropdown tenga MUCHOS links visibles
   await page.waitForFunction(() => {
     const visibleLinks = Array.from(document.querySelectorAll("a"))
       .filter(a => (a as HTMLElement).offsetParent !== null);
 
-    return visibleLinks.length > 50; // dropdown cargado
+    return visibleLinks.length > 50;
   });
 
 
@@ -134,7 +133,7 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
   }, team, "table");
 
 
-  const jugadores = await page.evaluate(() => {
+  const jugadoresData = await page.evaluate((): PlayerDTO[] => {
     const tables = Array.from(document.querySelectorAll("table"));
     const tablaJugadores = tables.find(table => {
       const header = table.innerText.toLowerCase();
@@ -149,7 +148,7 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
       const cols = row.querySelectorAll("td");
 
       return {
-        nombre: cols[1]?.querySelector("a")?.textContent?.trim()!!,
+        name: cols[1]?.querySelector("a")?.textContent?.trim(),
         position: cols[1]
           ?.querySelector(".player-meta-data:last-of-type")
           ?.textContent
@@ -163,7 +162,9 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
     });
   });
   const jugadoresMap = new Map(
-    jugadores.map(j => [j.nombre.toLowerCase(), j])
+    jugadoresData
+      .filter(j => j.name)
+      .map(j => [j.name!.toLowerCase(), j])
   );
 
   const cambiarTipoEstadistica = async (
@@ -195,7 +196,7 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
     }, {}, columnaEsperada);
   };
 
-  const agregarPorClase = async (campo: string, className: string) => {
+  const agregarPorClase = async (campo: PlayerStatKey, className: string) => {
     const data = await page.evaluate((className) => {
       const container = document.querySelector("#team-squad-stats");
       if (!container) return [];
@@ -210,43 +211,46 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
           ?.textContent?.trim();
 
         return {
-          nombre,
+          name: nombre,
           valor: Number(valor?.replace(/[^\d.]/g, "") || 0)
         };
       });
     }, className);
 
     for (const item of data) {
-      if (!item.nombre) continue;
+      if (!item.name) continue;
 
-      const jugador = jugadoresMap.get(item.nombre.toLowerCase());
+      const jugador = jugadoresMap.get(item.name.toLowerCase());
 
-      if (jugador && typeof (jugador as any)[campo] === "number") {
-        (jugador as any)[campo] = item.valor;
+      if (jugador) {
+        jugador[campo] = item.valor;
       }
     }
   };
 
-  const players = jugadores.reduce((acc, j) => {
-    if (position && j.position?.toLowerCase() !== position.toLowerCase()) {
-      return acc;
-    }
-    acc.push(new Player(j));
-    return acc;
-  }, [] as Player[]);
 
-  // Defensive
+
   await cambiarTipoEstadistica("defensive", "tackles");
   await agregarPorClase("tackles", "tacklePerGame");
 
-  // Offensive
   await cambiarTipoEstadistica("offensive", "key");
   await agregarPorClase("keyPasses", "keyPassPerGame");
 
   await agregarPorClase("dribbles", "dribbleWonPerGame");
 
+  const jugadores = jugadoresData.map(d =>
+    new Player({
+      name: d.name ?? "",
+      position: d.position ?? "",
+      goals: d.goals,
+      assists: d.assists,
+      shots: d.shots,
+      rating: d.rating,
+    })
+  );
+
   await browser.close();
-  return players;
+  return jugadores;
 
 }
 

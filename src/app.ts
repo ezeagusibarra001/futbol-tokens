@@ -16,6 +16,7 @@ app.use('/auth', authRoutes);
 app.use('/players', playerRoutes);
 
 // Global error handler
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status ?? 500;
   res.status(status).json({ message: err.message ?? 'Internal server error' });
