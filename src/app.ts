@@ -14,7 +14,7 @@ app.use('/', rootRoutes);
 app.use('/auth', authRoutes);
 
 // Global error handler
-app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error & { status?: number }, _req: Request, res: Response) => {
   const status = err.status ?? 500;
   res.status(status).json({ message: err.message ?? 'Internal server error' });
 });
