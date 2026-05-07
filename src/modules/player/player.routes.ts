@@ -15,6 +15,8 @@ import { authenticate } from '../auth/auth.middleware';
  *   get:
  *     summary: Get players by league, team, and optional position
  *     tags: [Players]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: league
