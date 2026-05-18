@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: Quote model + estrategias PerformanceWeighted/PositionAware + servicio de recálculo/ranking (paso 3). Tests 45/45 verdes.
+- **Última sesión hizo**: Seed superuser + modelos Holding/Order + emisión inicial 100 tokens (paso 5). Tests 59/59 verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -37,15 +37,18 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - Service: `recalculateAll(strategy?)`, `getPlayerQuotes`, `getLatestQuoteForPlayer`, `getRanking(limit)`, `computeOnDemand`.
   - Tests: 13 nuevos cubriendo penalty, especialización por posición, registry, ranking sort, error 404 y 400.
 
-- [ ] **4. Endpoints de cotización**.
-  - `GET /players/:id/quotes` (con rango de fechas opcional).
-  - `GET /players/ranking` (según estrategia activa, ordenado desc).
-  - `POST /quotes/recalculate` (manual job).
+- [x] **4. Endpoints de cotización**.
+  - `GET /players/:id/quotes?from&to` → historial ordenado desc.
+  - `GET /players/ranking?limit` (default 50, clamp 1..500).
+  - `POST /quotes/recalculate` con body `{ strategy?: 'PerformanceWeighted'|'PositionAware' }`.
+  - Routes de quote montadas en `/quotes`; `/players/ranking` declarado antes de `/:id` para evitar colisión. Swagger JSDoc por endpoint. 6 tests de controller.
 
-- [ ] **5. Seed del superusuario + modelos `Holding` y `Order`**.
-  - Script `src/config/seed.ts` que crea superuser y `Holding(superuser, player, 100)` para cada jugador.
-  - `holding.model.ts`: `userId`, `playerId`, `tokens`, índice único compuesto.
-  - `order.model.ts`: `userId`, `playerId`, `side` (BUY/SELL), `tokens`, `pricePerToken`, `total`, `idempotencyKey`, `createdAt`.
+- [x] **5. Seed del superusuario + modelos `Holding` y `Order`**.
+  - Hecho: `isSuperuser` flag en `User` schema. Seed (`src/config/seed.ts`) crea superuser desde `SUPERUSER_EMAIL/PASSWORD` y emite 100 tokens por cada player vía `ensureInitialHoldingsForAllPlayers`. Corre en boot si `SEED_ON_BOOT=true`.
+  - `holding.model.ts` con índice único `(userId, playerId)`, `tokens` y `avgBuyPrice`.
+  - `order.model.ts` con `side enum [BUY,SELL]`, `idempotencyKey` (sparse unique por user).
+  - `market.service.ts` expone `getSuperuser`, `ensureInitialHoldingsForPlayers`, `ensureInitialHoldingsForAllPlayers`. `player.service.sync*` lo llama después del upsert (autogenera holdings para jugadores nuevos).
+  - Tests: 8 nuevos (validations + service flow). `INITIAL_TOKENS_PER_PLAYER=100`.
 
 - [ ] **6. `/orders/buy` y `/orders/sell` con transacciones**.
   - Validar disponibilidad/saldo, usar cotización vigente, mover tokens entre user y superuser, registrar order — todo bajo `session.withTransaction()`.

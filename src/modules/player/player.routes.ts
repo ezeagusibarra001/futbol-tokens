@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getPlayerByIdHandler, getPlayersHandler, syncPlayersHandler } from './player.controller';
+import { getPlayerQuotesHandler, getRankingHandler } from '../quote/quote.controller';
 import { authenticate } from '../auth/auth.middleware';
 
 /**
@@ -54,6 +55,39 @@ import { authenticate } from '../auth/auth.middleware';
  *       404:
  *         description: Player not found
  *
+ * /players/ranking:
+ *   get:
+ *     summary: Ranking of players ordered by current quote value
+ *     tags: [Players]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200: { description: Ranked list of players with their latest quote }
+ *
+ * /players/{id}/quotes:
+ *   get:
+ *     summary: Quote history for a player
+ *     tags: [Players]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: from
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string, format: date-time }
+ *     responses:
+ *       200: { description: List of historical quotes ordered by date desc }
+ *
  * /players/sync:
  *   post:
  *     summary: Trigger a scrape+upsert for a given league and team
@@ -102,6 +136,8 @@ const router = Router();
 
 router.get('/', authenticate, getPlayersHandler);
 router.post('/sync', authenticate, syncPlayersHandler);
+router.get('/ranking', authenticate, getRankingHandler);
+router.get('/:id/quotes', authenticate, getPlayerQuotesHandler);
 router.get('/:id', authenticate, getPlayerByIdHandler);
 
 export default router;

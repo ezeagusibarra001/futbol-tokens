@@ -6,6 +6,9 @@ import * as fd from "../../integrations/football-data/football-data.client";
 jest.mock('../player.repository');
 jest.mock('../player.scrapper');
 jest.mock('../../integrations/football-data/football-data.client');
+jest.mock('../../market/market.service', () => ({
+    ensureInitialHoldingsForAllPlayers: jest.fn().mockResolvedValue(0),
+}));
 
 beforeEach(() => jest.clearAllMocks());
 

@@ -4,6 +4,7 @@ import { swaggerSpec } from './docs/swagger';
 import rootRoutes from './modules/root/root.routes';
 import authRoutes from './modules/auth/auth.routes';
 import playerRoutes from './modules/player/player.routes';
+import quoteRoutes from './modules/quote/quote.routes';
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/', rootRoutes);
 app.use('/auth', authRoutes);
 app.use('/players', playerRoutes);
+app.use('/quotes', quoteRoutes);
 
 // Global error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
