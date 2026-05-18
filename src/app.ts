@@ -5,6 +5,7 @@ import rootRoutes from './modules/root/root.routes';
 import authRoutes from './modules/auth/auth.routes';
 import playerRoutes from './modules/player/player.routes';
 import quoteRoutes from './modules/quote/quote.routes';
+import orderRoutes from './modules/market/order.routes';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use('/', rootRoutes);
 app.use('/auth', authRoutes);
 app.use('/players', playerRoutes);
 app.use('/quotes', quoteRoutes);
+app.use('/orders', orderRoutes);
 
 // Global error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

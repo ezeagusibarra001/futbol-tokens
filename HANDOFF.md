@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: Seed superuser + modelos Holding/Order + emisión inicial 100 tokens (paso 5). Tests 59/59 verdes.
+- **Última sesión hizo**: `/orders/buy` y `/orders/sell` con transacciones Mongo + idempotency (paso 6). Tests 69/69 verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -50,9 +50,14 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - `market.service.ts` expone `getSuperuser`, `ensureInitialHoldingsForPlayers`, `ensureInitialHoldingsForAllPlayers`. `player.service.sync*` lo llama después del upsert (autogenera holdings para jugadores nuevos).
   - Tests: 8 nuevos (validations + service flow). `INITIAL_TOKENS_PER_PLAYER=100`.
 
-- [ ] **6. `/orders/buy` y `/orders/sell` con transacciones**.
-  - Validar disponibilidad/saldo, usar cotización vigente, mover tokens entre user y superuser, registrar order — todo bajo `session.withTransaction()`.
-  - Soportar header `Idempotency-Key`.
+- [x] **6. `/orders/buy` y `/orders/sell` con transacciones**.
+  - Helper `withTx` en `src/config/db.ts` envolviendo `mongoose.startSession()` + `session.withTransaction()`.
+  - `order.service.ts` expone `buy`/`sell` (delegan en `execute({side})`). Validan inputs, resuelven precio vía `getEffectivePrice` (paso 3: usa última quote o `computeOnDemand` y la persiste), bloquean autotrade del superuser, hacen decremento atómico con `findOneAndUpdate({ tokens: {$gte: n} })` para evitar overdraw bajo concurrencia.
+  - `BUY`: decrementa superuser → upsert holding del comprador con recálculo de `avgBuyPrice`. `SELL`: decrementa holding del usuario → incrementa superuser.
+  - Idempotency: `Idempotency-Key` header → `Order.findOne({userId, idempotencyKey})` dentro de la txn devuelve la previa.
+  - Cada Order persiste `strategyName/Version` para auditoría.
+  - Routes en `/orders/buy` y `/orders/sell` con Swagger.
+  - Tests: 10 nuevos (validación, BUY new/existing holding, SELL, idempotency, 409 stock/saldo). Mock de `withTx` para no requerir replica set en tests.
 
 - [ ] **7. `/users/:id/portfolio` y `/users/:id/transactions`**.
   - Portfolio: tokens por jugador, precio promedio, valor actual, P&L.

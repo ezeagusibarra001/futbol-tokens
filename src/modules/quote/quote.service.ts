@@ -5,6 +5,7 @@ import {
   findLatestQuotesForPlayers,
   findQuotesByPlayer,
   insertManyQuotes,
+  insertQuote,
 } from './quote.repository';
 import { IQuote, IQuoteDoc } from './quote.model';
 import { DEFAULT_STRATEGY, getStrategy } from './strategies';
@@ -61,6 +62,29 @@ export const getRanking = async (limit = 50): Promise<RankingEntry[]> => {
 
   entries.sort((a, b) => (b.quote?.value ?? 0) - (a.quote?.value ?? 0));
   return entries.slice(0, limit);
+};
+
+export type EffectivePrice = {
+  value: number;
+  strategyName: string;
+  strategyVersion: string;
+};
+
+export const getEffectivePrice = async (playerId: string, strategyName = DEFAULT_STRATEGY): Promise<EffectivePrice> => {
+  const latest = await findLatestQuoteForPlayer(playerId);
+  if (latest) {
+    return { value: latest.value, strategyName: latest.strategyName, strategyVersion: latest.strategyVersion };
+  }
+  const od = await computeOnDemand(playerId, strategyName);
+  await insertQuote({
+    playerId: od.playerId,
+    score: od.score,
+    value: od.value,
+    strategyName: od.strategy,
+    strategyVersion: od.version,
+    at: new Date(),
+  });
+  return { value: od.value, strategyName: od.strategy, strategyVersion: od.version };
 };
 
 export const computeOnDemand = async (playerId: string, strategyName = DEFAULT_STRATEGY) => {
