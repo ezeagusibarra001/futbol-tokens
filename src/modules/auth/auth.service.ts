@@ -22,7 +22,7 @@ const signRefreshToken = (userId: string): string =>
 
 export const register = async (email: string, password: string) => {
   const safeEmail = String(email);
-  const existing = await User.findOne({ safeEmail });
+  const existing = await User.findOne({ email: safeEmail });
   if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
 
   const hashed = await bcrypt.hash(password, SALT_ROUNDS);
@@ -39,7 +39,7 @@ export const register = async (email: string, password: string) => {
 
 export const login = async (email: string, password: string) => {
   const safeEmail = String(email);
-  const user = await User.findOne({ safeEmail });
+  const user = await User.findOne({ email: safeEmail });
   if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
 
   const valid = await bcrypt.compare(password, user.password);

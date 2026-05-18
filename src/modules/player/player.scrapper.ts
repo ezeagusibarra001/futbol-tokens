@@ -1,7 +1,7 @@
 import { Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { Player } from "./player.model";
+import { IPlayer } from "./player.model";
 import { PlayerDTO, PlayerStatKey  } from "./dto/player.dto";
 
 puppeteer.use(StealthPlugin());
@@ -238,16 +238,24 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
 
   await agregarPorClase("dribbles", "dribbleWonPerGame");
 
-  const jugadores = jugadoresData.map(d =>
-    new Player({
-      name: d.name ?? "",
+  const jugadores: IPlayer[] = Array.from(jugadoresMap.values())
+    .filter((d): d is PlayerDTO & { name: string } => Boolean(d.name))
+    .map(d => ({
+      name: d.name,
       position: d.position ?? "",
-      goals: d.goals,
-      assists: d.assists,
-      shots: d.shots,
-      rating: d.rating,
-    })
-  );
+      league: leagueName,
+      team,
+      goals: d.goals ?? 0,
+      assists: d.assists ?? 0,
+      shots: d.shots ?? 0,
+      rating: d.rating ?? 0,
+      keyPasses: d.keyPasses ?? 0,
+      dribbles: d.dribbles ?? 0,
+      tackles: d.tackles ?? 0,
+      minutesPlayed: d.minutesPlayed ?? 0,
+      yellowCards: d.yellowCards ?? 0,
+      redCards: d.redCards ?? 0,
+    }));
 
   await browser.close();
   return jugadores;

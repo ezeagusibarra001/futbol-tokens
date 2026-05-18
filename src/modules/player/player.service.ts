@@ -1,10 +1,16 @@
 import { getPlayersFromTeamAndLeague } from "./player.scrapper";
+import { bulkUpsertPlayers, findPlayerById, findPlayers, PlayerFilters } from "./player.repository";
+import { IPlayerDoc } from "./player.model";
 
-export const getPlayers = async (league: string, team: string, position?: string) => {
-    let players = await getPlayersFromTeamAndLeague(league, team);
-    players = Array.from(players).filter(p => {
-        if (!position) return true;
-        return p.position?.toLowerCase() === position.toLowerCase();
-    });
-    return players;
+export const listPlayers = (filters: PlayerFilters): Promise<IPlayerDoc[]> => {
+    return findPlayers(filters);
+};
+
+export const getPlayerById = (id: string): Promise<IPlayerDoc | null> => {
+    return findPlayerById(id);
+};
+
+export const syncPlayersFromScrapper = async (league: string, team: string): Promise<number> => {
+    const scraped = await getPlayersFromTeamAndLeague(league, team);
+    return bulkUpsertPlayers(scraped);
 };
