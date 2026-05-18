@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: Adapter Football-Data.org integrado (paso 2). Tests 28/28 verdes.
+- **Última sesión hizo**: Quote model + estrategias PerformanceWeighted/PositionAware + servicio de recálculo/ranking (paso 3). Tests 45/45 verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -30,10 +30,12 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - Nuevo método en service: `syncCatalogFromFootballData(code)`.
   - Tests: 7 nuevos cubriendo URL/headers, success, fallback de squad, branches de error.
 
-- [ ] **3. Modelo `Quote` + estrategias `PerformanceWeighted` y `PositionAware` + servicio de recálculo**.
-  - `quote.model.ts` con `playerId`, `value`, `score`, `strategyName`, `strategyVersion`, `at`.
-  - `strategies/` con interface `ValuationStrategy { name; version; score(player); price(score, base) }`.
-  - Servicio `recalculateAll(strategyName)` que itera jugadores, calcula y persiste quote.
+- [x] **3. Modelo `Quote` + estrategias `PerformanceWeighted` y `PositionAware` + servicio de recálculo**.
+  - Hecho: `src/modules/quote/quote.model.ts` con `playerId/value/score/strategyName/strategyVersion/at`, índice `(playerId, at desc)`.
+  - Estrategias en `strategies/`: interface `ValuationStrategy`, `PerformanceWeighted` (pesos fijos) y `PositionAware` (pesos según grupo FW/MF/DF/GK). Normalización con caps por métrica + penalty por tarjetas. Precio: `base + score * SCALE_FACTOR` (base=1, scale=100).
+  - Repository con `insertManyQuotes`, `findQuotesByPlayer(from,to)`, `findLatestQuoteForPlayer`, `findLatestQuotesForPlayers` (aggregation por player).
+  - Service: `recalculateAll(strategy?)`, `getPlayerQuotes`, `getLatestQuoteForPlayer`, `getRanking(limit)`, `computeOnDemand`.
+  - Tests: 13 nuevos cubriendo penalty, especialización por posición, registry, ranking sort, error 404 y 400.
 
 - [ ] **4. Endpoints de cotización**.
   - `GET /players/:id/quotes` (con rango de fechas opcional).
