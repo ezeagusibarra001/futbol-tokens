@@ -2,6 +2,7 @@ import { listPlayers, getPlayerById, syncPlayersFromScrapper, syncCatalogFromFoo
 import * as repo from "../player.repository";
 import * as scrapper from "../player.scrapper";
 import * as fd from "../../integrations/football-data/football-data.client";
+import { cache } from "../../../config/cache";
 
 jest.mock('../player.repository');
 jest.mock('../player.scrapper');
@@ -9,6 +10,8 @@ jest.mock('../../integrations/football-data/football-data.client');
 jest.mock('../../market/market.service', () => ({
     ensureInitialHoldingsForAllPlayers: jest.fn().mockResolvedValue(0),
 }));
+
+beforeEach(() => cache.clear());
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -27,6 +30,25 @@ describe('player.service', () => {
         const res = await getPlayerById('1');
         expect(repo.findPlayerById).toHaveBeenCalledWith('1');
         expect(res).toEqual(mock);
+    });
+
+    it('listPlayers caches results and short-circuits on a second call with same filters', async () => {
+        (repo.findPlayers as jest.Mock).mockResolvedValue([{ name: 'A' }]);
+        await listPlayers({ league: 'Premier League' });
+        await listPlayers({ league: 'Premier League' });
+        expect(repo.findPlayers).toHaveBeenCalledTimes(1);
+    });
+
+    it('syncPlayersFromScrapper invalidates the players cache', async () => {
+        (repo.findPlayers as jest.Mock).mockResolvedValue([{ name: 'A' }]);
+        (scrapper.getPlayersFromTeamAndLeague as jest.Mock).mockResolvedValue([]);
+        (repo.bulkUpsertPlayers as jest.Mock).mockResolvedValue(0);
+
+        await listPlayers({ league: 'L' });
+        await syncPlayersFromScrapper('L', 'T');
+        await listPlayers({ league: 'L' });
+
+        expect(repo.findPlayers).toHaveBeenCalledTimes(2);
     });
 
     it('syncCatalogFromFootballData fetches then bulk-upserts', async () => {

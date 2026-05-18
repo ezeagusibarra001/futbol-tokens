@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: Scheduler semanal (paso 8) con node-cron. Tests 82/82 verdes.
+- **Última sesión hizo**: TTL cache in-memory para reads + invalidaciones (paso 9). Tests 90/90 verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -71,7 +71,11 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - Wired en `index.ts` después de `connectDB` + seed. 5 tests nuevos.
   - Dependencia agregada: `node-cron` + `@types/node-cron`.
 
-- [ ] **9. Cache TTL** para `/players`, `/players/:id`, `/players/ranking` (in-memory por ahora, abstraído por si después se mueve a Redis).
+- [x] **9. Cache TTL**.
+  - `src/config/cache.ts` con `TtlCache` (get/set/delete/invalidatePrefix/wrap). Singleton `cache` exportado. Default 60s, ranking 30s.
+  - Cacheo: `listPlayers` (clave por filtros), `getPlayerById`, `getRanking(limit)`. Claves namespaced (`players:list:`, `players:byId:`, `quote:ranking:`).
+  - Invalidaciones: `syncPlayersFromScrapper` y `syncCatalogFromFootballData` borran `players:*` + `quote:ranking:*`. `recalculateAll` borra `quote:ranking:*`.
+  - 6 tests del cache + 2 nuevos en player.service (cache hit + invalidación). API agnóstica para reemplazar por Redis después.
 
 - [ ] **10. Refinar tests, logger y manejo de errores**.
   - Logger en `src/config/logger.ts`.

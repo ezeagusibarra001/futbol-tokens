@@ -9,6 +9,7 @@ import {
 } from './quote.repository';
 import { IQuote, IQuoteDoc } from './quote.model';
 import { DEFAULT_STRATEGY, getStrategy } from './strategies';
+import { cache, CACHE_KEYS, TTL } from '../../config/cache';
 
 export type RecalculateResult = {
   strategy: string;
@@ -36,6 +37,7 @@ export const recalculateAll = async (strategyName?: string): Promise<Recalculate
   });
 
   const created = await insertManyQuotes(quotes);
+  cache.invalidatePrefix(CACHE_KEYS.rankingPrefix);
   return { strategy: strategy.name, version: strategy.version, quotesCreated: created, at };
 };
 
@@ -50,19 +52,20 @@ export type RankingEntry = {
   quote: IQuoteDoc | null;
 };
 
-export const getRanking = async (limit = 50): Promise<RankingEntry[]> => {
-  const players = await findPlayers({});
-  const ids = players.map(p => p._id);
-  const latest = await findLatestQuotesForPlayers(ids);
+export const getRanking = (limit = 50): Promise<RankingEntry[]> =>
+  cache.wrap(`${CACHE_KEYS.rankingPrefix}${limit}`, TTL.ranking, async () => {
+    const players = await findPlayers({});
+    const ids = players.map(p => p._id);
+    const latest = await findLatestQuotesForPlayers(ids);
 
-  const entries: RankingEntry[] = players.map(p => ({
-    player: p,
-    quote: latest.get(p._id.toString()) ?? null,
-  }));
+    const entries: RankingEntry[] = players.map(p => ({
+      player: p,
+      quote: latest.get(p._id.toString()) ?? null,
+    }));
 
-  entries.sort((a, b) => (b.quote?.value ?? 0) - (a.quote?.value ?? 0));
-  return entries.slice(0, limit);
-};
+    entries.sort((a, b) => (b.quote?.value ?? 0) - (a.quote?.value ?? 0));
+    return entries.slice(0, limit);
+  });
 
 export type EffectivePrice = {
   value: number;
