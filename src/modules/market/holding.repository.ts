@@ -24,7 +24,7 @@ export const ensureHolding = async (
   const doc = await Holding.findOneAndUpdate(
     { userId, playerId },
     { $setOnInsert: { tokens, avgBuyPrice: 0 } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   ).exec();
   return doc;
 };

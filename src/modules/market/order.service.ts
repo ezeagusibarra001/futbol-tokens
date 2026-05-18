@@ -49,7 +49,7 @@ const execute = async ({ userId, playerId, tokens, side, idempotencyKey }: Execu
     const decremented = await Holding.findOneAndUpdate(
       { userId: fromUserId, playerId: playerOid, tokens: { $gte: tokens } },
       { $inc: { tokens: -tokens } },
-      { new: true, session }
+      { returnDocument: 'after', session }
     ).exec();
     if (!decremented) {
       const msg = side === 'BUY' ? 'Not enough tokens available' : 'Insufficient token balance to sell';

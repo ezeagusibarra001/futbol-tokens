@@ -80,7 +80,7 @@ describe('order.service - BUY', () => {
     expect(Holding.findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ tokens: { $gte: 1 } }),
       { $inc: { tokens: -1 } },
-      expect.objectContaining({ new: true })
+      expect.objectContaining({ returnDocument: 'after' })
     );
     expect(Order.create).toHaveBeenCalledWith(
       [expect.objectContaining({ side: 'BUY', tokens: 1, pricePerToken: 10, total: 10 })],

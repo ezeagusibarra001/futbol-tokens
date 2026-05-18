@@ -29,7 +29,7 @@ export const upsertPlayer = async (data: IPlayer): Promise<IPlayerDoc> => {
 
   const doc = await Player.findOneAndUpdate(filter, { $set: data }, {
     upsert: true,
-    new: true,
+    returnDocument: 'after',
     setDefaultsOnInsert: true,
   }).exec();
   return doc;
