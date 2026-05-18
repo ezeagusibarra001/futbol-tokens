@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: `/users/:id/portfolio` y `/users/:id/transactions` (paso 7). Tests 77/77 verdes.
+- **Última sesión hizo**: Scheduler semanal (paso 8) con node-cron. Tests 82/82 verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -64,7 +64,12 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - `user.controller.ts` + `user.routes.ts` exponen `/users/:id/portfolio` y `/users/:id/transactions`. Autorización: 403 si `req.userId !== id` (solo dueño accede).
   - 8 tests nuevos (positions, fallback de precio, vacío, 403 cross-user).
 
-- [ ] **8. Scheduler semanal** (node-cron o setInterval) para recalcular cotizaciones + sync de catálogo.
+- [x] **8. Scheduler semanal**.
+  - `src/config/scheduler.ts` con `node-cron` (default lunes 03:00 recalc / 04:00 sync). Configurable por `SCHEDULER_CRON_RECALC` y `SCHEDULER_CRON_SYNC`. Se activa solo si `SCHEDULER_ENABLED=true`.
+  - `runRecalcJob` llama `recalculateAll()`. `runSyncJob` itera las 5 ligas (PL/BL1/PD/SA/FL1) y dispara `syncCatalogFromFootballData` por cada una. Ambos jobs tragan errores con `console.error` para no matar el cron.
+  - Validación de cron strings con fallback a default si inválido.
+  - Wired en `index.ts` después de `connectDB` + seed. 5 tests nuevos.
+  - Dependencia agregada: `node-cron` + `@types/node-cron`.
 
 - [ ] **9. Cache TTL** para `/players`, `/players/:id`, `/players/ranking` (in-memory por ahora, abstraído por si después se mueve a Redis).
 
