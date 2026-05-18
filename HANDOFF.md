@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: `/orders/buy` y `/orders/sell` con transacciones Mongo + idempotency (paso 6). Tests 69/69 verdes.
+- **Última sesión hizo**: `/users/:id/portfolio` y `/users/:id/transactions` (paso 7). Tests 77/77 verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -59,9 +59,10 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - Routes en `/orders/buy` y `/orders/sell` con Swagger.
   - Tests: 10 nuevos (validación, BUY new/existing holding, SELL, idempotency, 409 stock/saldo). Mock de `withTx` para no requerir replica set en tests.
 
-- [ ] **7. `/users/:id/portfolio` y `/users/:id/transactions`**.
-  - Portfolio: tokens por jugador, precio promedio, valor actual, P&L.
-  - Transactions: historial de orders.
+- [x] **7. `/users/:id/portfolio` y `/users/:id/transactions`**.
+  - `portfolio.service.ts` en `market/`: arma posiciones con `tokens`, `avgBuyPrice`, `currentPrice` (última quote, fallback a avgBuyPrice si no hay), `currentValue`, `investedValue`, `pnl`, `pnlPct`, más totales agregados.
+  - `user.controller.ts` + `user.routes.ts` exponen `/users/:id/portfolio` y `/users/:id/transactions`. Autorización: 403 si `req.userId !== id` (solo dueño accede).
+  - 8 tests nuevos (positions, fallback de precio, vacío, 403 cross-user).
 
 - [ ] **8. Scheduler semanal** (node-cron o setInterval) para recalcular cotizaciones + sync de catálogo.
 
