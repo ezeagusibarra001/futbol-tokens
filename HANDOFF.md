@@ -1,0 +1,70 @@
+# HANDOFF — futbol-tokens
+
+Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este archivo después de cada tarea completada o cuando cambien decisiones de diseño. Al empezar una sesión, leelo primero para saber qué sigue.
+
+> **Convención**: marcar `[x]` cuando se completa, dejar `[ ]` si está pendiente, `[~]` si está en progreso. Incluir una línea de "Notas" debajo de cada paso si hay decisiones tomadas o cosas a revisar.
+
+## Última actualización
+- **Fecha**: 2026-05-18
+- **Última sesión hizo**: Adapter Football-Data.org integrado (paso 2). Tests 28/28 verdes.
+
+## Decisiones tomadas (no re-debatir salvo pedido del usuario)
+- **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
+- **Tokens**: 100 emitidos por jugador, valor inicial 1 crédito. Superusuario concentra la tenencia inicial.
+- **Concurrencia**: transacciones de Mongo con `session.withTransaction()`. Requiere replica set local; en tests usar `mongodb-memory-server`.
+- **Football-Data.org**: catálogo primario (jugadores/equipos/ligas). WhoScored solo aporta stats de performance.
+- **DB**: Mongo local con replica set para dev; `mongodb-memory-server` en tests.
+- **Player model**: persistido en Mongoose con `league`, `team`, `externalId`, `position`, stats + `minutesPlayed`, `yellowCards`, `redCards`. Índice único `(name, team, league)`.
+
+## Plan (10 pasos)
+
+- [x] **1. Migrar `Player` a Mongoose** con `league/team/externalId/cards/minutes`.
+  - Hecho: schema en `src/modules/player/player.model.ts`, nuevo `player.repository.ts`, service refactorizado (`listPlayers`, `getPlayerById`, `syncPlayersFromScrapper`), controller con filtros opcionales + `GET /:id` + `POST /sync`, scrapper devuelve `IPlayer[]` con `league/team` seteados. Tests actualizados (6/6) y typecheck limpio.
+  - Bonus: fix de bug `User.findOne({ safeEmail })` → `{ email: safeEmail }` en `auth.service.ts` (login y register).
+
+- [x] **2. Adapter Football-Data.org como fuente primaria del catálogo**.
+  - Hecho: `src/modules/integrations/football-data/football-data.client.ts` con axios + `X-Auth-Token`, DTOs en `dto/football-data.dto.ts` con mapa `COMPETITION_CODES` (PL/BL1/PD/SA/FL1).
+  - `fetchPlayersByCompetition(code)` aplana squads, setea `externalId="fd:<id>"`, `league` y `team`. Si el competition endpoint no trae squad, hace fallback a `/teams/{id}`.
+  - Tolerancia a fallas: todos los `fetch*` capturan, loguean `warn` y devuelven `null` o `[]`. Nunca propagan.
+  - `FOOTBALL_DATA_TOKEN` agregado a `.env.example`.
+  - Nuevo método en service: `syncCatalogFromFootballData(code)`.
+  - Tests: 7 nuevos cubriendo URL/headers, success, fallback de squad, branches de error.
+
+- [ ] **3. Modelo `Quote` + estrategias `PerformanceWeighted` y `PositionAware` + servicio de recálculo**.
+  - `quote.model.ts` con `playerId`, `value`, `score`, `strategyName`, `strategyVersion`, `at`.
+  - `strategies/` con interface `ValuationStrategy { name; version; score(player); price(score, base) }`.
+  - Servicio `recalculateAll(strategyName)` que itera jugadores, calcula y persiste quote.
+
+- [ ] **4. Endpoints de cotización**.
+  - `GET /players/:id/quotes` (con rango de fechas opcional).
+  - `GET /players/ranking` (según estrategia activa, ordenado desc).
+  - `POST /quotes/recalculate` (manual job).
+
+- [ ] **5. Seed del superusuario + modelos `Holding` y `Order`**.
+  - Script `src/config/seed.ts` que crea superuser y `Holding(superuser, player, 100)` para cada jugador.
+  - `holding.model.ts`: `userId`, `playerId`, `tokens`, índice único compuesto.
+  - `order.model.ts`: `userId`, `playerId`, `side` (BUY/SELL), `tokens`, `pricePerToken`, `total`, `idempotencyKey`, `createdAt`.
+
+- [ ] **6. `/orders/buy` y `/orders/sell` con transacciones**.
+  - Validar disponibilidad/saldo, usar cotización vigente, mover tokens entre user y superuser, registrar order — todo bajo `session.withTransaction()`.
+  - Soportar header `Idempotency-Key`.
+
+- [ ] **7. `/users/:id/portfolio` y `/users/:id/transactions`**.
+  - Portfolio: tokens por jugador, precio promedio, valor actual, P&L.
+  - Transactions: historial de orders.
+
+- [ ] **8. Scheduler semanal** (node-cron o setInterval) para recalcular cotizaciones + sync de catálogo.
+
+- [ ] **9. Cache TTL** para `/players`, `/players/:id`, `/players/ranking` (in-memory por ahora, abstraído por si después se mueve a Redis).
+
+- [ ] **10. Refinar tests, logger y manejo de errores**.
+  - Logger en `src/config/logger.ts`.
+  - Tests de integración para los flujos de orders (con `mongodb-memory-server`).
+  - Cobertura mínima de service en cada módulo nuevo.
+
+## Bloqueos conocidos
+- (ninguno por ahora)
+
+## Notas para próxima sesión
+- Antes de cualquier paso: `npx tsc --noEmit && npx jest` para confirmar base verde.
+- Cuando arranque el paso 6, levantar Mongo en modo replica set local (`docker-compose` propuesto, todavía no escrito).

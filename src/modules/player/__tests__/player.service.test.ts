@@ -1,9 +1,11 @@
-import { listPlayers, getPlayerById, syncPlayersFromScrapper } from "../player.service";
+import { listPlayers, getPlayerById, syncPlayersFromScrapper, syncCatalogFromFootballData } from "../player.service";
 import * as repo from "../player.repository";
 import * as scrapper from "../player.scrapper";
+import * as fd from "../../integrations/football-data/football-data.client";
 
 jest.mock('../player.repository');
 jest.mock('../player.scrapper');
+jest.mock('../../integrations/football-data/football-data.client');
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -22,6 +24,16 @@ describe('player.service', () => {
         const res = await getPlayerById('1');
         expect(repo.findPlayerById).toHaveBeenCalledWith('1');
         expect(res).toEqual(mock);
+    });
+
+    it('syncCatalogFromFootballData fetches then bulk-upserts', async () => {
+        const fetched = [{ externalId: 'fd:1', name: 'A', league: 'Premier League', team: 'Arsenal' }];
+        (fd.fetchPlayersByCompetition as jest.Mock).mockResolvedValue(fetched);
+        (repo.bulkUpsertPlayers as jest.Mock).mockResolvedValue(1);
+        const count = await syncCatalogFromFootballData('PL');
+        expect(fd.fetchPlayersByCompetition).toHaveBeenCalledWith('PL');
+        expect(repo.bulkUpsertPlayers).toHaveBeenCalledWith(fetched);
+        expect(count).toBe(1);
     });
 
     it('syncPlayersFromScrapper scrapes then bulk-upserts', async () => {
