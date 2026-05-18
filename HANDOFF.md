@@ -6,7 +6,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 ## Última actualización
 - **Fecha**: 2026-05-18
-- **Última sesión hizo**: TTL cache in-memory para reads + invalidaciones (paso 9). Tests 90/90 verdes.
+- **Última sesión hizo**: Logger + error handler + request logger + tests faltantes de controllers (paso 10 — final). Tests 110/110 verdes. **TP completo.**
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -77,10 +77,13 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - Invalidaciones: `syncPlayersFromScrapper` y `syncCatalogFromFootballData` borran `players:*` + `quote:ranking:*`. `recalculateAll` borra `quote:ranking:*`.
   - 6 tests del cache + 2 nuevos en player.service (cache hit + invalidación). API agnóstica para reemplazar por Redis después.
 
-- [ ] **10. Refinar tests, logger y manejo de errores**.
-  - Logger en `src/config/logger.ts`.
-  - Tests de integración para los flujos de orders (con `mongodb-memory-server`).
-  - Cobertura mínima de service en cada módulo nuevo.
+- [x] **10. Refinar tests, logger y manejo de errores**.
+  - `src/config/logger.ts` con niveles (debug/info/warn/error) controlados por `LOG_LEVEL`. JSON-friendly meta.
+  - `src/config/error-handler.ts` con `errorHandler` (mapea `.status`, oculta mensaje en 5xx, loguea con severidad correcta) + `requestLogger` middleware (method/path/status/ms).
+  - Montados en `app.ts`; reemplazado el handler inline. `console.*` reemplazado por `logger.*` en `db.ts`, `seed.ts`, `scheduler.ts`, `football-data.client.ts`.
+  - Helper `httpError(msg, status)` exportado para uso uniforme.
+  - Tests faltantes agregados: `auth.controller`, `player.controller`, `order.controller`, `logger`, `error-handler` (+ requestLogger).
+  - Final: 20 test suites, 110 tests verdes, typecheck limpio.
 
 ## Bloqueos conocidos
 - (ninguno por ahora)

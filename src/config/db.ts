@@ -1,11 +1,12 @@
 import mongoose, { ClientSession } from 'mongoose';
+import { logger } from './logger';
 
 export const connectDB = async (): Promise<void> => {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error('MONGO_URI is not defined in environment variables');
 
   await mongoose.connect(uri);
-  console.log('MongoDB connected');
+  logger.info('MongoDB connected');
 };
 
 export const withTx = async <T>(fn: (session: ClientSession) => Promise<T>): Promise<T> => {

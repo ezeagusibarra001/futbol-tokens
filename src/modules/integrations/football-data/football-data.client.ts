@@ -6,6 +6,7 @@ import {
   FDCompetitionTeamsResponse,
   FDTeamResponse,
 } from './dto/football-data.dto';
+import { logger } from '../../../config/logger';
 
 const BASE_URL = 'https://api.football-data.org/v4';
 
@@ -40,7 +41,7 @@ export const fetchTeamsByCompetition = async (
     return res.data;
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
-    console.warn(`[football-data] fetchTeamsByCompetition(${code}) failed: ${msg}`);
+    logger.warn(`[football-data] fetchTeamsByCompetition(${code}) failed: ${msg}`);
     return null;
   }
 };
@@ -51,7 +52,7 @@ export const fetchTeamById = async (teamId: number): Promise<FDTeamResponse | nu
     return res.data;
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
-    console.warn(`[football-data] fetchTeamById(${teamId}) failed: ${msg}`);
+    logger.warn(`[football-data] fetchTeamById(${teamId}) failed: ${msg}`);
     return null;
   }
 };

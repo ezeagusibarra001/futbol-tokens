@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { User } from '../modules/auth/user.model';
 import { ensureInitialHoldingsForAllPlayers } from '../modules/market/market.service';
+import { logger } from './logger';
 
 export const seedSuperuser = async (): Promise<void> => {
   const email = (process.env.SUPERUSER_EMAIL ?? 'superuser@futbol-tokens.local').toLowerCase();
@@ -17,11 +18,11 @@ export const seedSuperuser = async (): Promise<void> => {
 
   const hashed = await bcrypt.hash(password, 10);
   await User.create({ email, password: hashed, isSuperuser: true });
-  console.info(`[seed] superuser created: ${email}`);
+  logger.info(`[seed] superuser created: ${email}`);
 };
 
 export const seedAll = async (): Promise<void> => {
   await seedSuperuser();
   const created = await ensureInitialHoldingsForAllPlayers();
-  if (created > 0) console.info(`[seed] initial holdings created for ${created} players`);
+  if (created > 0) logger.info(`[seed] initial holdings created for ${created} players`);
 };
