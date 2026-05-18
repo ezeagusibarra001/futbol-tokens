@@ -1,6 +1,9 @@
 export type PlayerDTO = {
+    externalId?: string;
     name?: string;
     position?: string;
+    league?: string;
+    team?: string;
     goals: number;
     assists: number;
     shots: number;
@@ -8,6 +11,9 @@ export type PlayerDTO = {
     dribbles?: number;
     tackles?: number;
     keyPasses?: number;
+    minutesPlayed?: number;
+    yellowCards?: number;
+    redCards?: number;
 };
 
 export type PlayerStatKey =
@@ -17,4 +23,7 @@ export type PlayerStatKey =
     | "keyPasses"
     | "dribbles"
     | "tackles"
-    | "rating";
+    | "rating"
+    | "minutesPlayed"
+    | "yellowCards"
+    | "redCards";
