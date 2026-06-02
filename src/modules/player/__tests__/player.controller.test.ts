@@ -48,7 +48,7 @@ describe('player.controller', () => {
   });
 
   it('syncPlayersHandler returns count on success', async () => {
-    (service.syncPlayersFromScrapper as jest.Mock).mockResolvedValue(7);
+    (service.syncPlayersFromScrapperFromTeamAndLeague as jest.Mock).mockResolvedValue(7);
     const req = { body: { league: 'PL', team: 'Arsenal' } } as Request;
     const res = mkRes();
     await syncPlayersHandler(req, res, jest.fn());

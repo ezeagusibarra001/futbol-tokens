@@ -1,4 +1,4 @@
-import { listPlayers, getPlayerById, syncPlayersFromScrapper, syncCatalogFromFootballData } from "../player.service";
+import { listPlayers, getPlayerById, syncCatalogFromFootballData, syncPlayersFromScrapperFromTeamAndLeague } from "../player.service";
 import * as repo from "../player.repository";
 import * as scrapper from "../player.scrapper";
 import * as fd from "../../integrations/football-data/football-data.client";
@@ -45,7 +45,7 @@ describe('player.service', () => {
         (repo.bulkUpsertPlayers as jest.Mock).mockResolvedValue(0);
 
         await listPlayers({ league: 'L' });
-        await syncPlayersFromScrapper('L', 'T');
+        await syncPlayersFromScrapperFromTeamAndLeague('L', 'T');
         await listPlayers({ league: 'L' });
 
         expect(repo.findPlayers).toHaveBeenCalledTimes(2);
@@ -65,7 +65,7 @@ describe('player.service', () => {
         const scraped = [{ name: 'A', league: 'X', team: 'Y' }];
         (scrapper.getPlayersFromTeamAndLeague as jest.Mock).mockResolvedValue(scraped);
         (repo.bulkUpsertPlayers as jest.Mock).mockResolvedValue(1);
-        const count = await syncPlayersFromScrapper('X', 'Y');
+        const count = await syncPlayersFromScrapperFromTeamAndLeague('X', 'Y');
         expect(scrapper.getPlayersFromTeamAndLeague).toHaveBeenCalledWith('X', 'Y');
         expect(repo.bulkUpsertPlayers).toHaveBeenCalledWith(scraped);
         expect(count).toBe(1);

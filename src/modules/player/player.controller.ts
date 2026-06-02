@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getPlayerById, listPlayers, syncPlayersFromScrapper } from './player.service';
+import { getPlayerById, listPlayers, syncPlayersFromScrapperByLeague, syncPlayersFromScrapperFromTeamAndLeague } from './player.service';
 
 export const getPlayersHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -32,11 +32,17 @@ export const getPlayerByIdHandler = async (req: Request, res: Response, next: Ne
 export const syncPlayersHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { league, team } = req.body as { league?: string; team?: string };
-    if (!league || !team) {
-      res.status(400).json({ message: 'league and team are required' });
+    if (!league) {
+      res.status(400).json({ message: 'league is required' });
       return;
     }
-    const count = await syncPlayersFromScrapper(league, team);
+    let count: number;
+    if (!team) {
+      count = await syncPlayersFromScrapperByLeague(league);
+    } 
+    else { 
+      count = await syncPlayersFromScrapperFromTeamAndLeague(league, team);
+    }
     res.status(200).json({ upserted: count });
   } catch (err) {
     next(err);

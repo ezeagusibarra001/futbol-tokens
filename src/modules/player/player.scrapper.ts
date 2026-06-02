@@ -47,8 +47,8 @@ const preActions = async () => {
   return { browser, page };
 };
 
-const findLink = async (page: Page, leagueName: string, querySelector: string) => {
-  return await page.evaluate((leagueName: string, querySelector: string) => {
+const findLink = async (page: Page, name: string, querySelector: string) => {
+  return await page.evaluate((name: string, querySelector: string) => {
     const grid = document.querySelector(querySelector);
     if (!grid) return null;
 
@@ -56,13 +56,13 @@ const findLink = async (page: Page, leagueName: string, querySelector: string) =
 
     for (const el of links) {
       const text = el.textContent?.trim().toLowerCase();
-      if (text && text.includes(leagueName.toLowerCase())) {
+      if (text && text.includes(name.toLowerCase())) {
         return el.href;
       };
     }
 
     return null;
-  }, leagueName, querySelector);
+  }, name, querySelector);
 };
 
 export const getPlayersFromTeamAndLeague = async (leagueName: string, team: string) => {
@@ -132,8 +132,93 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
     return null;
   }, team, "table");
 
+  const jugadores = await getPlayers(page, team, leagueName);
+  await browser.close();
+  return jugadores;
 
-  const jugadoresData = await page.evaluate((): PlayerDTO[] => {
+}
+
+
+export const getPlayersFromLeague = async (leagueName: string) => {
+  const { browser, page } = await preActions();
+  await page.waitForFunction(() => {
+    return Array.from(document.querySelectorAll("a, button"))
+      .some(el => el.textContent?.toLowerCase().includes("tournament"));
+  });
+
+  await page.evaluate(() => {
+    const btn = Array.from(document.querySelectorAll("a, button"))
+      .find(el => el.textContent?.toLowerCase().includes("tournament"));
+
+    if (btn) (btn as HTMLElement).click();
+  });
+
+  await page.waitForFunction(() => {
+    const visibleLinks = Array.from(document.querySelectorAll("a"))
+      .filter(a => (a as HTMLElement).offsetParent !== null);
+
+    return visibleLinks.length > 50;
+  });
+
+
+  const links = await page.$$("a");
+
+  let tournamentLink: string | null = null;
+
+  for (const link of links) {
+    const text = await link.evaluate(el => el.textContent?.toLowerCase() || "");
+
+    if (text.includes(leagueName.toLowerCase())) {
+      tournamentLink = await link.evaluate(el => (el as HTMLAnchorElement).href);
+      break;
+    }
+  }
+  if (tournamentLink) {
+    await page.goto(tournamentLink, { waitUntil: "networkidle2" });
+  }
+
+  await page.waitForSelector("table");
+  const teamStatiscticLink = await findLink(page, "Team Statistics", "#sub-navigation");
+  if (teamStatiscticLink) {
+    await page.goto(teamStatiscticLink, { waitUntil: "networkidle2" });
+  }
+
+  const teams = await page.evaluate((querySelector: string) => {
+    const grid = document.querySelector(querySelector);
+    if (!grid) return [];
+    const links = grid.querySelectorAll("a");
+    const results = [];
+    for (const el of links) {
+      //modifica el texto para que no tenga espacios ni puntos ni numeros antes del nombre del equipo
+      const text = el.textContent?.trim().toLowerCase().replace(/^[\d.\s-]+/, "");
+      if (text) {
+        results.push({
+          name: text,
+          href: (el as HTMLAnchorElement).href
+        });
+      }
+    }
+    return results;
+  }, "table");
+
+  const results = [];
+
+  for (const team of teams) {
+    results.push(await getPlayersFromLeagueLink(team.href, team.name, leagueName, page));
+  }
+
+  await browser.close();
+  return results;
+}
+
+
+export const getPlayersFromLeagueLink = async (leagueLink: string, team: string, league: string, page: Page) => {
+  await page.goto(leagueLink, { waitUntil: "networkidle2" });
+  return await getPlayers(page, team, league);
+}
+
+const getPlayers = async (page : Page, team: string, league: string) => {
+   const jugadoresData = await page.evaluate((): PlayerDTO[] => {
     const tables = Array.from(document.querySelectorAll("table"));
     const tablaJugadores = tables.find(table => {
       const header = table.innerText.toLowerCase();
@@ -243,8 +328,8 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
     .map(d => ({
       name: d.name,
       position: d.position ?? "",
-      league: leagueName,
-      team,
+      league: league,
+      team: team,
       goals: d.goals ?? 0,
       assists: d.assists ?? 0,
       shots: d.shots ?? 0,
@@ -257,9 +342,5 @@ export const getPlayersFromTeamAndLeague = async (leagueName: string, team: stri
       redCards: d.redCards ?? 0,
     }));
 
-  await browser.close();
   return jugadores;
-
 }
-
-

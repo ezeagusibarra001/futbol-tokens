@@ -1,4 +1,4 @@
-import { getPlayersFromTeamAndLeague } from "./player.scrapper";
+import { getPlayersFromLeague, getPlayersFromTeamAndLeague } from "./player.scrapper";
 import { bulkUpsertPlayers, findPlayerById, findPlayers, PlayerFilters } from "./player.repository";
 import { IPlayerDoc } from "./player.model";
 import { fetchPlayersByCompetition } from "../integrations/football-data/football-data.client";
@@ -23,9 +23,23 @@ const invalidatePlayerCaches = () => {
     cache.invalidatePrefix(CACHE_KEYS.rankingPrefix);
 };
 
-export const syncPlayersFromScrapper = async (league: string, team: string): Promise<number> => {
+export const syncPlayersFromScrapperFromTeamAndLeague = async (league: string, team: string): Promise<number> => {
     const scraped = await getPlayersFromTeamAndLeague(league, team);
     const count = await bulkUpsertPlayers(scraped);
+    await ensureInitialHoldingsForAllPlayers();
+    invalidatePlayerCaches();
+    return count;
+};
+
+export const syncPlayersFromScrapperByLeague = async (league: string): Promise<number> => {
+    const scraped = await getPlayersFromLeague(league);
+    const count = await scraped.reduce(
+    async (accPromise, p) => {
+        const acc = await accPromise;
+        return acc + await bulkUpsertPlayers(p);
+    },
+    Promise.resolve(0)
+    );
     await ensureInitialHoldingsForAllPlayers();
     invalidatePlayerCaches();
     return count;

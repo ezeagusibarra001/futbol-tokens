@@ -100,7 +100,7 @@ import { authenticate } from '../auth/auth.middleware';
  *         application/json:
  *           schema:
  *             type: object
- *             required: [league, team]
+ *             required: [league]
  *             properties:
  *               league: { type: string }
  *               team: { type: string }
