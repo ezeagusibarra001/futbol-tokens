@@ -16,7 +16,8 @@ const DEMO_PLAYERS: IPlayer[] = [
 
 export const seedSuperuser = async (): Promise<void> => {
   const email = (process.env.SUPERUSER_EMAIL ?? 'superuser@futbol-tokens.local').toLowerCase();
-  const password = process.env.SUPERUSER_PASSWORD ?? 'change-me-now';
+  const password = process.env.SUPERUSER_PASSWORD;
+  if (!password) throw new Error('SUPERUSER_PASSWORD environment variable is required');
 
   const existing = await User.findOne({ email }).exec();
   if (existing) {

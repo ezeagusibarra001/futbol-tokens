@@ -3,11 +3,11 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - develop
+      - dev
       - feature-*
   pull_request:
     branches:
-      - develop
+      - dev
       - feature-*
 
 jobs:
