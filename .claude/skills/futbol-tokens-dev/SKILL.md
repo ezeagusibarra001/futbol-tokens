@@ -74,7 +74,81 @@ Mount new routers in [src/app.ts](src/app.ts) under a base path: `app.use('/<fea
 
 ## 5. Testing (Jest + ts-jest)
 
-Tests live under `src/modules/<feature>/__tests__/` and match `**/__tests__/**/*.test.ts` ([jest.config.ts](jest.config.ts)).
+Tests are separated into unit and end-to-end suites.
+
+### Structure
+
+```text
+src/modules/<feature>/__tests__/
+├── unit/
+│   ├── <feature>.service.test.ts
+│   ├── <feature>.controller.test.ts
+│   └── ...
+└── e2e/
+    ├── <feature>.e2e.test.ts
+    └── ...
+```
+
+### Jest configs
+
+- Unit tests: `jest.unit.config.ts`
+- E2E tests: `jest.e2e.config.ts`
+
+### Commands
+
+```bash
+npm run test
+npm run test:unit
+npm run test:e2e
+npm run coverage
+```
+
+### Test classification
+
+#### Unit tests
+
+Must isolate the layer under test using mocks.
+
+Examples:
+
+- Service tests mocking repositories and external integrations.
+- Controller tests mocking services.
+- Middleware tests with mocked Express objects.
+- Model validation tests.
+
+Unit tests must not require a running MongoDB instance.
+
+#### E2E tests
+
+Validate complete flows through multiple layers.
+
+Examples:
+
+- HTTP endpoint tests.
+- Authentication flows.
+- Order creation and portfolio updates.
+- Database persistence behavior.
+
+E2E tests may use a test database and real repository implementations.
+
+### Required tests per layer
+
+- **Model**: validation tests using `new Model({...})` and `doc.validate()`.
+- **Repository**: only test non-trivial query construction or filtering logic.
+- **Service**: mandatory. Cover happy paths and failure paths.
+- **Controller**: verify request parsing, service delegation, and response shaping.
+- **Middleware**: verify authorization and rejection paths.
+
+### Bar for "done"
+
+A change is not done until:
+
+1. `npx tsc --noEmit` passes.
+2. `npm run test:unit` passes.
+3. New behavior has at least one unit test.
+4. Public endpoints have Swagger documentation.
+5. No `any`, unused imports, or unused variables.
+6. `HANDOFF.md` has been updated.
 
 ### Required tests per layer
 

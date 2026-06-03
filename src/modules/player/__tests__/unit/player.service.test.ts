@@ -1,4 +1,4 @@
-import { listPlayers, getPlayerById, syncCatalogFromFootballData, syncPlayersFromScrapperFromTeamAndLeague } from "../../player.service";
+import { listPlayers, getPlayerById, syncCatalogFromFootballData, syncPlayersFromScrapperFromTeamAndLeague, syncPlayersFromScrapperByLeague } from "../../player.service";
 import * as repo from "../../player.repository";
 import * as scrapper from "../../player.scrapper";
 import * as fd from "../../../integrations/football-data/football-data.client";
@@ -69,5 +69,37 @@ describe('player.service', () => {
         expect(scrapper.getPlayersFromTeamAndLeague).toHaveBeenCalledWith('X', 'Y');
         expect(repo.bulkUpsertPlayers).toHaveBeenCalledWith(scraped);
         expect(count).toBe(1);
+    });
+
+    it('syncPlayersFromScrapperByLeague scrapes per group and bulk-upserts', async () => {
+        const scraped = [
+            [{ name: 'A', league: 'X', team: 'T1' }],
+            [{ name: 'B', league: 'X', team: 'T2' }],
+        ];
+        (scrapper.getPlayersFromLeague as jest.Mock).mockResolvedValue(scraped);
+        (repo.bulkUpsertPlayers as jest.Mock).mockResolvedValue(1);
+
+        const count = await syncPlayersFromScrapperByLeague('X');
+
+        expect(scrapper.getPlayersFromLeague).toHaveBeenCalledWith('X');
+        expect(repo.bulkUpsertPlayers).toHaveBeenCalledTimes(2);
+        expect(count).toBe(2);
+    });
+
+    it('syncCatalogFromFootballData handles empty fetch', async () => {
+        (fd.fetchPlayersByCompetition as jest.Mock).mockResolvedValue([]);
+        (repo.bulkUpsertPlayers as jest.Mock).mockResolvedValue(0);
+
+        const count = await syncCatalogFromFootballData('PL');
+
+        expect(count).toBe(0);
+    });
+
+    it('getPlayerById returns null when not found', async () => {
+        (repo.findPlayerById as jest.Mock).mockResolvedValue(null);
+
+        const result = await getPlayerById('nonexistent');
+
+        expect(result).toBeNull();
     });
 });

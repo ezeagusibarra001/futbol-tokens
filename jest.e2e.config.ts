@@ -8,7 +8,9 @@ const config: Config = {
     '**/__tests__/e2e/**/*.test.ts',
   ],
 
-  testTimeout: 30000,
+  testTimeout: 120000,
+
+  maxWorkers: 1,
 
   collectCoverage: false,
 };

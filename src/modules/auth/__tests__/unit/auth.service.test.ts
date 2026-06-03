@@ -107,6 +107,16 @@ describe('auth.service - refresh', () => {
       status: 401,
     });
   });
+
+  it('should throw 401 if user not found during refresh', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ sub: 'nonexistent' });
+    (User.findById as jest.Mock).mockResolvedValue(null);
+
+    await expect(refresh('some_token')).rejects.toMatchObject({
+      message: 'Refresh token revoked',
+      status: 401,
+    });
+  });
 });
 
 describe('auth.service - logout', () => {
@@ -122,5 +132,12 @@ describe('auth.service - logout', () => {
     (jwt.verify as jest.Mock).mockImplementation(() => { throw new Error('invalid'); });
 
     await expect(logout('bad_token')).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('logout does not throw if user is already gone', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ sub: 'user123' });
+    (User.findByIdAndUpdate as jest.Mock).mockResolvedValue(null);
+
+    await expect(logout('valid_token')).resolves.toBeUndefined();
   });
 });

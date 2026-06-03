@@ -46,4 +46,22 @@ describe('user.controller', () => {
     await getTransactionsHandler(req, res, jest.fn());
     expect(res.status).toHaveBeenCalledWith(403);
   });
+
+  it('getPortfolio forwards service errors', async () => {
+    (portfolio.getPortfolio as jest.Mock).mockRejectedValue(new Error('db error'));
+    const req = { params: { id: 'u1' }, userId: 'u1' } as unknown as AuthRequest;
+    const res = mkRes();
+    const next = jest.fn();
+    await getPortfolioHandler(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('getTransactions forwards service errors', async () => {
+    (portfolio.getUserTransactions as jest.Mock).mockRejectedValue(new Error('db error'));
+    const req = { params: { id: 'u1' }, userId: 'u1' } as unknown as AuthRequest;
+    const res = mkRes();
+    const next = jest.fn();
+    await getTransactionsHandler(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
 });

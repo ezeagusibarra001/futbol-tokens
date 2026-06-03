@@ -49,6 +49,9 @@ const config: Config = {
 
     // scraper
     '!src/modules/player/player.scrapper.ts',
+
+    // test helpers (including shared src/modules/__tests__/helpers.ts)
+    '!src/**/__tests__/**',
   ],
 };
 

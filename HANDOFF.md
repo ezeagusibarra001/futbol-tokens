@@ -5,8 +5,8 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 > **Convención**: marcar `[x]` cuando se completa, dejar `[ ]` si está pendiente, `[~]` si está en progreso. Incluir una línea de "Notas" debajo de cada paso si hay decisiones tomadas o cosas a revisar.
 
 ## Última actualización
-- **Fecha**: 2026-05-18
-- **Última sesión hizo**: Logger + error handler + request logger + tests faltantes de controllers (paso 10 — final). Tests 110/110 verdes. **TP completo.**
+- **Fecha**: 2026-06-02
+- **Última sesión hizo**: E2E tests de player, quote y user en sus respectivas carpetas. Refactor: tests de player/quote/user extraídos de market.e2e.test.ts. E2E tests co-localizados en cada feature. 57 e2e (5 suites) + 182 unit (28 suites) verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -15,8 +15,9 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 - **Football-Data.org**: catálogo primario (jugadores/equipos/ligas). WhoScored solo aporta stats de performance.
 - **DB**: Mongo local con replica set para dev; `mongodb-memory-server` en tests.
 - **Player model**: persistido en Mongoose con `league`, `team`, `externalId`, `position`, stats + `minutesPlayed`, `yellowCards`, `redCards`. Índice único `(name, team, league)`.
+- **E2E testing**: `supertest` contra `app` (sin listen), `mongodb-memory-server` con replica set manual (`replSetInitiate` + wait 2s), `jest.e2e.config.ts` separado con `testTimeout: 120000` y `maxWorkers: 1`. Tests co-localizados en `src/modules/<feature>/__tests__/e2e/`.
 
-## Plan (10 pasos)
+## Plan (11 pasos)
 
 - [x] **1. Migrar `Player` a Mongoose** con `league/team/externalId/cards/minutes`.
   - Hecho: schema en `src/modules/player/player.model.ts`, nuevo `player.repository.ts`, service refactorizado (`listPlayers`, `getPlayerById`, `syncPlayersFromScrapper`), controller con filtros opcionales + `GET /:id` + `POST /sync`, scrapper devuelve `IPlayer[]` con `league/team` seteados. Tests actualizados (6/6) y typecheck limpio.
@@ -84,6 +85,18 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
   - Helper `httpError(msg, status)` exportado para uso uniforme.
   - Tests faltantes agregados: `auth.controller`, `player.controller`, `order.controller`, `logger`, `error-handler` (+ requestLogger).
   - Final: 20 test suites, 110 tests verdes, typecheck limpio.
+
+- [x] **11. E2E tests con supertest + mongodb-memory-server**.
+  - `helpers.ts` en cada feature: `src/modules/auth/__tests__/e2e/helpers.ts` y `src/modules/market/__tests__/e2e/helpers.ts` — setup/teardown, DB seeding (superuser + players + holdings), `registerAndGetToken` con fallback a login si el usuario ya existe.
+  - `src/modules/auth/__tests__/e2e/auth.e2e.test.ts`: 14 tests — register duplicado, login inválido, refresh token, logout con blacklist.
+  - `src/modules/market/__tests__/e2e/market.e2e.test.ts`: 21 tests — players CRUD, quotes históricas, recalculate, ranking, orders (buy/sell con validaciones, 409 stock, idempotency), portfolio (vacío, con holdings, 403 cross-user), transactions (propias, 403 ajeno).
+  - `jest.e2e.config.ts`: `testTimeout: 120000`, `maxWorkers: 1`, patrón `**/__tests__/e2e/**/*.test.ts` (misma cobertura porque `**` atraviesa `src/modules/<feature>/__tests__/e2e/`).
+  - Replica set manual: `mongod` sin `--replSet`, URI con `replicaSet=rs0`, `replSetInitiate` + 2s wait post-connect (evita "not primary" en Windows).
+   - Resultado: 37/37 e2e verdes, 110/110 unit verdes (0 regresiones). `npx tsc --noEmit` limpio.
+   - Sesión posterior: se agregaron tests faltantes: modelos `user.model.test.ts` y `quote.model.test.ts` (validación de schemas); repositorios `player.repository.test.ts`, `holding.repository.test.ts`, `order.repository.test.ts`, `quote.repository.test.ts` (queries dinámicas, upserts, session piping, aggregation pipeline); controllers completados (`auth.controller.test.ts` con refresh+logout, `order.controller.test.ts` con sell happy path + buy error forwarding, `player.controller.test.ts` con error forwarding + missing id, `user.controller.test.ts` con error forwarding); middleware `auth.middleware.test.ts` con 500 path; service edge cases (`auth.service.test.ts` refresh user not found + logout null user, `player.service.test.ts` syncByLeague + empty fetch); `db.test.ts` (`withTx` lifecycle); `seed.test.ts` (superuser create/upgrade/skip). Total: 182 unit tests (28 suites) + 52 e2e (2 suites).
+   - Fix: same-second JWT `iat` produce tokens idénticos → se agregó `await new Promise(r => setTimeout(r, 1500))` en el test de rotación de refresh token para asegurar `iat` distinto.
+   - E2E tests movidos de `src/__tests__/e2e/` a `src/modules/<feature>/__tests__/e2e/` con su propio `helpers.ts` en cada feature. Directorio `src/__tests__/` eliminado.
+   - Features cubiertas: **auth** (18 tests), **market** (11 tests — orders buy/sell), **player** (12 tests — list, filter, get, sync validation), **quote** (10 tests — recalculate, ranking, history, date filters), **user** (10 tests — portfolio, transactions, cross-user 403, sorting). Total: 57 e2e tests, 182 unit tests, 5 suites e2e, 28 suites unit.
 
 ## Bloqueos conocidos
 - (ninguno por ahora)

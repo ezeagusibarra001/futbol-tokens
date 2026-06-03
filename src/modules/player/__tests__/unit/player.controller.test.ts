@@ -54,4 +54,38 @@ describe('player.controller', () => {
     await syncPlayersHandler(req, res, jest.fn());
     expect(res.json).toHaveBeenCalledWith({ upserted: 7 });
   });
+
+  it('getPlayerByIdHandler returns 400 when id param is missing', async () => {
+    const req = { params: {} } as unknown as Request;
+    const res = mkRes();
+    await getPlayerByIdHandler(req, res, jest.fn());
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('getPlayersHandler forwards errors to next', async () => {
+    (service.listPlayers as jest.Mock).mockRejectedValue(new Error('db error'));
+    const req = { query: {} } as unknown as Request;
+    const res = mkRes();
+    const next = jest.fn();
+    await getPlayersHandler(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('getPlayerByIdHandler forwards errors to next', async () => {
+    (service.getPlayerById as jest.Mock).mockRejectedValue(new Error('db error'));
+    const req = { params: { id: 'x' } } as unknown as Request;
+    const res = mkRes();
+    const next = jest.fn();
+    await getPlayerByIdHandler(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('syncPlayersHandler forwards errors to next', async () => {
+    (service.syncPlayersFromScrapperFromTeamAndLeague as jest.Mock).mockRejectedValue(new Error('scrape failed'));
+    const req = { body: { league: 'PL', team: 'Arsenal' } } as Request;
+    const res = mkRes();
+    const next = jest.fn();
+    await syncPlayersHandler(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
 });
