@@ -1,9 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { seedSuperuser, seedAll } from '../../seed';
 import { User } from '../../../modules/auth/user.model';
+import { Player } from '../../../modules/player/player.model';
+import { Quote } from '../../../modules/quote/quote.model';
+import { recalculateAll } from '../../../modules/quote/quote.service';
 import * as marketService from '../../../modules/market/market.service';
 
 jest.mock('../../../modules/auth/user.model');
+jest.mock('../../../modules/player/player.model');
+jest.mock('../../../modules/quote/quote.model');
+jest.mock('../../../modules/quote/quote.service');
 jest.mock('../../../modules/market/market.service');
 jest.mock('bcryptjs');
 
@@ -67,8 +73,12 @@ describe('seedSuperuser', () => {
 });
 
 describe('seedAll', () => {
-  it('calls seedSuperuser and ensureInitialHoldingsForAllPlayers', async () => {
+  it('calls seedSuperuser and all seed helpers', async () => {
     mockFindOne(null);
+    (Player.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(0) });
+    (Player.insertMany as jest.Mock).mockResolvedValue([]);
+    (Quote.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(0) });
+    (recalculateAll as jest.Mock).mockResolvedValue({ strategy: 'PW', version: '1', quotesCreated: 5, at: new Date() });
     (bcrypt.hash as jest.Mock).mockResolvedValue('h');
     (User.create as jest.Mock).mockResolvedValue(undefined);
     (marketService.ensureInitialHoldingsForAllPlayers as jest.Mock).mockResolvedValue(5);
@@ -76,6 +86,38 @@ describe('seedAll', () => {
     await seedAll();
 
     expect(User.findOne).toHaveBeenCalled();
+    expect(Player.countDocuments).toHaveBeenCalled();
+    expect(Player.insertMany).toHaveBeenCalled();
+    expect(Quote.countDocuments).toHaveBeenCalled();
+    expect(recalculateAll).toHaveBeenCalled();
     expect(marketService.ensureInitialHoldingsForAllPlayers).toHaveBeenCalled();
+  });
+
+  it('skips demo players if they already exist', async () => {
+    mockFindOne(null);
+    (Player.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(3) });
+    (Quote.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(0) });
+    (recalculateAll as jest.Mock).mockResolvedValue({ strategy: 'PW', version: '1', quotesCreated: 5, at: new Date() });
+    (bcrypt.hash as jest.Mock).mockResolvedValue('h');
+    (User.create as jest.Mock).mockResolvedValue(undefined);
+    (marketService.ensureInitialHoldingsForAllPlayers as jest.Mock).mockResolvedValue(5);
+
+    await seedAll();
+
+    expect(Player.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('skips demo quotes if they already exist', async () => {
+    mockFindOne(null);
+    (Player.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(0) });
+    (Player.insertMany as jest.Mock).mockResolvedValue([]);
+    (Quote.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(10) });
+    (bcrypt.hash as jest.Mock).mockResolvedValue('h');
+    (User.create as jest.Mock).mockResolvedValue(undefined);
+    (marketService.ensureInitialHoldingsForAllPlayers as jest.Mock).mockResolvedValue(5);
+
+    await seedAll();
+
+    expect(recalculateAll).not.toHaveBeenCalled();
   });
 });

@@ -5,8 +5,8 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 > **Convención**: marcar `[x]` cuando se completa, dejar `[ ]` si está pendiente, `[~]` si está en progreso. Incluir una línea de "Notas" debajo de cada paso si hay decisiones tomadas o cosas a revisar.
 
 ## Última actualización
-- **Fecha**: 2026-06-02
-- **Última sesión hizo**: E2E tests de player, quote y user en sus respectivas carpetas. Refactor: tests de player/quote/user extraídos de market.e2e.test.ts. E2E tests co-localizados en cada feature. 57 e2e (5 suites) + 182 unit (28 suites) verdes.
+- **Fecha**: 2026-06-03
+- **Última sesión hizo**: Seed de datos demo (5 jugadores, quotes iniciales, superuser, demo user) al bootear con `SEED_ON_BOOT=true`. Fix: `idempotencyKey: undefined` convertido a `null` por Mongoose causaba E11000 duplicate key en orders. Fix: `clearDb` cambió de `deleteMany` a `dropCollection`. 184 unit (28 suites) + 57 e2e (5 suites) verdes.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -16,6 +16,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 - **DB**: Mongo local con replica set para dev; `mongodb-memory-server` en tests.
 - **Player model**: persistido en Mongoose con `league`, `team`, `externalId`, `position`, stats + `minutesPlayed`, `yellowCards`, `redCards`. Índice único `(name, team, league)`.
 - **E2E testing**: `supertest` contra `app` (sin listen), `mongodb-memory-server` con replica set manual (`replSetInitiate` + wait 2s), `jest.e2e.config.ts` separado con `testTimeout: 120000` y `maxWorkers: 1`. Tests co-localizados en `src/modules/<feature>/__tests__/e2e/`.
+- **E11000 fix**: `idempotencyKey: undefined` explícito en `Order.create()` es convertido a `null` por Mongoose, colisionando con el sparse unique index `userId_1_idempotencyKey_1`. Solución: spread condicional `...(idempotencyKey ? { idempotencyKey } : {})` para omitir la key cuando no se provee.
 
 ## Plan (11 pasos)
 
@@ -46,6 +47,7 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 
 - [x] **5. Seed del superusuario + modelos `Holding` y `Order`**.
   - Hecho: `isSuperuser` flag en `User` schema. Seed (`src/config/seed.ts`) crea superuser desde `SUPERUSER_EMAIL/PASSWORD` y emite 100 tokens por cada player vía `ensureInitialHoldingsForAllPlayers`. Corre en boot si `SEED_ON_BOOT=true`.
+  - Ampliado: ahora también crea 5 jugadores demo (uno por liga), corre `recalculateAll` para quotes iniciales, y crea usuario `demo@futbol-tokens.local / demo1234`.
   - `holding.model.ts` con índice único `(userId, playerId)`, `tokens` y `avgBuyPrice`.
   - `order.model.ts` con `side enum [BUY,SELL]`, `idempotencyKey` (sparse unique por user).
   - `market.service.ts` expone `getSuperuser`, `ensureInitialHoldingsForPlayers`, `ensureInitialHoldingsForAllPlayers`. `player.service.sync*` lo llama después del upsert (autogenera holdings para jugadores nuevos).

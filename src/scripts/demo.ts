@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '../config/db';
@@ -34,13 +35,13 @@ const STARTING_STATS: IPlayer[] = [
 // "Time passes" — same players, updated stats showing evolution mid-season
 const FINAL_STATS = STARTING_STATS.map(p => ({
   ...p,
-  goals: p.goals + Math.floor(Math.random() * 8) + 2,
-  assists: p.assists + Math.floor(Math.random() * 4),
-  shots: p.shots + Math.floor(Math.random() * 15) + 5,
-  rating: Math.min(10, p.rating + Math.random() * 0.6),
-  keyPasses: p.keyPasses + Math.floor(Math.random() * 8),
+  goals: p.goals + crypto.randomInt(8) + 2,
+  assists: p.assists + crypto.randomInt(4),
+  shots: p.shots + crypto.randomInt(15) + 5,
+  rating: Math.min(10, p.rating + crypto.randomInt(600_000) / 1_000_000),
+  keyPasses: p.keyPasses + crypto.randomInt(8),
   minutesPlayed: p.minutesPlayed + 800,
-  yellowCards: p.yellowCards + (Math.random() > 0.5 ? 1 : 0),
+  yellowCards: p.yellowCards + crypto.randomInt(2),
 }));
 
 const upsertPlayers = async (data: IPlayer[]) => {
