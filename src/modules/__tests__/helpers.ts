@@ -8,7 +8,7 @@ import { Holding } from '../market/holding.model';
 let mongoServer: MongoMemoryReplSet;
 
 export const TEST_USER_EMAIL = 'testuser@test.com';
-export const TEST_USER_PASSWORD = 'password123';
+export const TEST_USER_PASSWORD = 'password123'; //NOSONAR
 
 export const startTestDb = async (): Promise<void> => {
   mongoServer = await MongoMemoryReplSet.create({
@@ -27,7 +27,7 @@ export const startTestDb = async (): Promise<void> => {
   process.env.JWT_REFRESH_EXPIRES_IN = '30d';
   process.env.LOG_LEVEL = 'silent';
   process.env.SUPERUSER_EMAIL = 'superuser@futbol-tokens.local';
-  process.env.SUPERUSER_PASSWORD = 'change-me-now';
+  process.env.SUPERUSER_PASSWORD = 'change-me-now'; //NOSONAR
 
   await mongoose.connect(uri, {
     serverSelectionTimeoutMS: 120000,

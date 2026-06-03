@@ -30,36 +30,52 @@ describe('player.repository', () => {
   beforeEach(() => jest.clearAllMocks());
 
   describe('findPlayers', () => {
+    const buildQueryChain = () => {
+      const chain: Record<string, jest.Mock> = {
+        where: jest.fn(),
+        equals: jest.fn(),
+        lean: jest.fn(),
+        exec: jest.fn(),
+      };
+      chain.where.mockReturnValue(chain);
+      chain.equals.mockReturnValue(chain);
+      chain.lean.mockReturnValue(chain);
+      return chain;
+    };
+
     it('filters by position with case-insensitive normalization (uppercase)', async () => {
-      const mockLean = jest.fn().mockResolvedValue([]);
-      const mockFind = jest.fn(() => ({ lean: () => ({ exec: mockLean }) }));
-      (Player.find as jest.Mock).mockImplementation(mockFind);
+      const q = buildQueryChain();
+      q.exec.mockResolvedValue([]);
+      (Player.find as jest.Mock).mockReturnValue(q);
 
       await findPlayers({ position: 'fw' });
 
-      const query = (Player.find as jest.Mock).mock.calls[0][0];
-      expect(query.position).toBe('FW');
+      expect(q.where).toHaveBeenCalledWith('position');
+      expect(q.equals).toHaveBeenCalledWith('FW');
+      expect(Player.find).toHaveBeenCalledWith();
     });
 
     it('filters by league and team', async () => {
-      const mockLean = jest.fn().mockResolvedValue([]);
-      const mockFind = jest.fn(() => ({ lean: () => ({ exec: mockLean }) }));
-      (Player.find as jest.Mock).mockImplementation(mockFind);
+      const q = buildQueryChain();
+      q.exec.mockResolvedValue([]);
+      (Player.find as jest.Mock).mockReturnValue(q);
 
       await findPlayers({ league: 'La Liga', team: 'Barcelona' });
 
-      const query = (Player.find as jest.Mock).mock.calls[0][0];
-      expect(query.league).toBe('La Liga');
-      expect(query.team).toBe('Barcelona');
+      expect(q.where).toHaveBeenCalledWith('league');
+      expect(q.equals).toHaveBeenCalledWith('La Liga');
+      expect(q.where).toHaveBeenCalledWith('team');
+      expect(q.equals).toHaveBeenCalledWith('Barcelona');
     });
 
     it('returns empty array when no filters match', async () => {
-      const mockExec = jest.fn().mockResolvedValue([]);
-      const mockFind = jest.fn(() => ({ lean: () => ({ exec: mockExec }) }));
-      (Player.find as jest.Mock).mockImplementation(mockFind);
+      const q = buildQueryChain();
+      q.exec.mockResolvedValue([]);
+      (Player.find as jest.Mock).mockReturnValue(q);
 
       const result = await findPlayers({ league: 'Nonexistent' });
       expect(result).toEqual([]);
+      expect(q.where).toHaveBeenCalledWith('league');
     });
   });
 

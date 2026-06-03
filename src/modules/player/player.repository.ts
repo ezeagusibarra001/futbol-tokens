@@ -1,8 +1,6 @@
 import { Types } from 'mongoose';
 import { Player, IPlayer, IPlayerDoc } from './player.model';
 
-type FilterQuery = Record<string, unknown>;
-
 export interface PlayerFilters {
   league?: string;
   team?: string;
@@ -29,17 +27,17 @@ const asStringOr = (v: unknown, fallback: string): string =>
   typeof v === 'string' ? v : fallback;
 
 export const findPlayers = (filters: PlayerFilters = {}): Promise<IPlayerDoc[]> => {
-  const query: FilterQuery = {};
+  let query = Player.find();
   if (typeof filters.league === 'string' && filters.league) {
-    query.league = filters.league;
+    query = query.where('league').equals(filters.league);
   }
   if (typeof filters.team === 'string' && filters.team) {
-    query.team = filters.team;
+    query = query.where('team').equals(filters.team);
   }
   if (typeof filters.position === 'string' && filters.position) {
-    query.position = filters.position.toUpperCase();
+    query = query.where('position').equals(filters.position.toUpperCase());
   }
-  return Player.find(query).lean<IPlayerDoc[]>().exec();
+  return query.lean<IPlayerDoc[]>().exec();
 };
 
 export const findPlayerById = (id: string): Promise<IPlayerDoc | null> => {
