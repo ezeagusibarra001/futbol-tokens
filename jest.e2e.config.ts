@@ -1,8 +1,15 @@
 import type { Config } from 'jest';
-import baseConfig from './jest.base.config.ts';
 
 const config: Config = {
-  ...baseConfig,
+  testEnvironment: 'node',
+
+  clearMocks: true,
+
+  transform: {
+    '^.+\\.ts$': ['ts-jest', { tsconfig: './tsconfig.jest.json' }],
+  },
+
+  moduleFileExtensions: ['ts', 'js', 'json'],
 
   testMatch: [
     '**/__tests__/e2e/**/*.test.ts',
