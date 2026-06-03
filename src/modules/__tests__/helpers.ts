@@ -1,46 +1,26 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose, { Types } from 'mongoose';
 import app from '../../app';
 import { User } from '../auth/user.model';
 import { Player } from '../player/player.model';
 import { Holding } from '../market/holding.model';
 
-let mongoServer: MongoMemoryServer;
+let mongoServer: MongoMemoryReplSet;
 
 export const TEST_USER_EMAIL = 'testuser@test.com';
 export const TEST_USER_PASSWORD = 'password123';
 
-const RS_NAME = 'rs0';
-
-const parsePort = (uri: string): number => {
-  const m = uri.match(/:(\d+)\//);
-  return m ? parseInt(m[1], 10) : 27017;
-};
-
-const initiateReplicaSet = async (uri: string): Promise<void> => {
-  const port = parsePort(uri);
-  const client = mongoose.connection.getClient();
-  const admin = client.db('admin');
-  try {
-    await admin.command({ replSetGetStatus: 1 });
-  } catch {
-    await admin.command({
-      replSetInitiate: {
-        _id: RS_NAME,
-        members: [{ _id: 0, host: `127.0.0.1:${port}` }],
-      },
-    });
-    await new Promise(r => setTimeout(r, 2000));
-  }
-};
-
 export const startTestDb = async (): Promise<void> => {
-  mongoServer = await MongoMemoryServer.create({
-    instance: { replSet: RS_NAME },
+  mongoServer = await MongoMemoryReplSet.create({
+    replSet: {
+      count: 1,
+      storageEngine: 'wiredTiger',
+    },
   });
+
   const uri = mongoServer.getUri();
-  const uriWithOpts = `${uri}${uri.includes('?') ? '&' : '?'}directConnection=true&retryWrites=true`;
-  process.env.MONGO_URI = uriWithOpts;
+
+  process.env.MONGO_URI = uri;
   process.env.JWT_ACCESS_SECRET = 'test-access-secret-for-e2e';
   process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-for-e2e';
   process.env.JWT_ACCESS_EXPIRES_IN = '15m';
@@ -49,23 +29,29 @@ export const startTestDb = async (): Promise<void> => {
   process.env.SUPERUSER_EMAIL = 'superuser@futbol-tokens.local';
   process.env.SUPERUSER_PASSWORD = 'change-me-now';
 
-  await mongoose.connect(uriWithOpts, {
+  await mongoose.connect(uri, {
     serverSelectionTimeoutMS: 120000,
   });
-  await initiateReplicaSet(uri);
 };
 
 export const stopTestDb = async (): Promise<void> => {
   await mongoose.disconnect();
-  if (mongoServer) await mongoServer.stop();
+
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
 };
 
 export const getApp = () => app;
 
 export const clearDb = async (): Promise<void> => {
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    await collections[key].deleteMany({});
+  if (mongoose.connection.readyState !== 1) return;
+  const db = mongoose.connection.db;
+  if (db) {
+    const collections = await db.listCollections().toArray();
+    for (const collection of collections) {
+      await db.dropCollection(collection.name);
+    }
   }
 };
 

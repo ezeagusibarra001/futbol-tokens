@@ -89,7 +89,7 @@ const execute = async ({ userId, playerId, tokens, side, idempotencyKey }: Execu
         tokens,
         pricePerToken: price.value,
         total,
-        idempotencyKey,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
         strategyName: price.strategyName,
         strategyVersion: price.strategyVersion,
       }],
