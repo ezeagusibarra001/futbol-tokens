@@ -1,10 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { getPlayerById, listPlayers, syncPlayersFromScrapperByLeague, syncPlayersFromScrapperFromTeamAndLeague } from './player.service';
 
+const asString = (v: unknown): string | undefined =>
+  typeof v === 'string' ? v : undefined;
+
 export const getPlayersHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { league, team, position } = req.query as { league?: string; team?: string; position?: string };
-    const players = await listPlayers({ league, team, position });
+    const players = await listPlayers({
+      league: asString(req.query.league),
+      team: asString(req.query.team),
+      position: asString(req.query.position),
+    });
     res.status(200).json(players);
   } catch (err) {
     next(err);
@@ -31,7 +37,8 @@ export const getPlayerByIdHandler = async (req: Request, res: Response, next: Ne
 
 export const syncPlayersHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { league, team } = req.body as { league?: string; team?: string };
+    const league = asString(req.body.league);
+    const team = asString(req.body.team);
     if (!league) {
       res.status(400).json({ message: 'league is required' });
       return;
