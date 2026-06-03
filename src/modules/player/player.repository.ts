@@ -11,9 +11,15 @@ export interface PlayerFilters {
 
 export const findPlayers = (filters: PlayerFilters = {}): Promise<IPlayerDoc[]> => {
   const query: FilterQuery = {};
-  if (filters.league) query.league = filters.league;
-  if (filters.team) query.team = filters.team;
-  if (filters.position) query.position = new RegExp(`^${filters.position}$`, 'i');
+  if (typeof filters.league === 'string' && filters.league) {
+    query.league = filters.league;
+  }
+  if (typeof filters.team === 'string' && filters.team) {
+    query.team = filters.team;
+  }
+  if (typeof filters.position === 'string' && filters.position) {
+    query.position = filters.position.toUpperCase();
+  }
   return Player.find(query).lean<IPlayerDoc[]>().exec();
 };
 

@@ -26,7 +26,7 @@ export const register = async (email: string, password: string) => {
   if (existing) throw Object.assign(new Error('Email already in use'), { status: 409 });
 
   const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await User.create({ email, password: hashed });
+  const user = await User.create({ email: safeEmail, password: hashed });
 
   const accessToken = signAccessToken(user.id as string);
   const refreshToken = signRefreshToken(user.id as string);

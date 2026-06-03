@@ -31,7 +31,7 @@ describe('player.repository', () => {
   beforeEach(() => jest.clearAllMocks());
 
   describe('findPlayers', () => {
-    it('builds a regex query for position (case-insensitive)', async () => {
+    it('filters by position with case-insensitive normalization (uppercase)', async () => {
       const mockLean = jest.fn().mockResolvedValue([]);
       const mockFind = jest.fn(() => ({ lean: () => ({ exec: mockLean }) }));
       (Player.find as jest.Mock).mockImplementation(mockFind);
@@ -39,9 +39,7 @@ describe('player.repository', () => {
       await findPlayers({ position: 'fw' });
 
       const query = (Player.find as jest.Mock).mock.calls[0][0];
-      expect(query.position).toBeInstanceOf(RegExp);
-      expect(query.position.test('FW')).toBe(true);
-      expect(query.position.test('fw')).toBe(true);
+      expect(query.position).toBe('FW');
     });
 
     it('filters by league and team', async () => {
