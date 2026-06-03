@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
-import { Holding } from '../holding.model';
-import { Order } from '../order.model';
+import { Holding } from '../../holding.model';
+import { Order } from '../../order.model';
 
 describe('Holding model', () => {
     it('defaults tokens and avgBuyPrice to 0', () => {

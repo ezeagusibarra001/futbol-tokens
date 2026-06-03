@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import { getPortfolioHandler, getTransactionsHandler } from '../user.controller';
-import * as portfolio from '../../market/portfolio.service';
-import { AuthRequest } from '../../auth/auth.middleware';
+import { getPortfolioHandler, getTransactionsHandler } from '../../user.controller';
+import * as portfolio from '../../../market/portfolio.service';
+import { AuthRequest } from '../../../auth/auth.middleware';
 
-jest.mock('../../market/portfolio.service');
+jest.mock('../../../market/portfolio.service');
 
 beforeEach(() => jest.clearAllMocks());
 

@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import { buyHandler, sellHandler } from '../order.controller';
-import * as service from '../order.service';
-import { AuthRequest } from '../../auth/auth.middleware';
+import { buyHandler, sellHandler } from '../../order.controller';
+import * as service from '../../order.service';
+import { AuthRequest } from '../../../auth/auth.middleware';
 
-jest.mock('../order.service');
+jest.mock('../../order.service');
 
 const mkRes = () => {
   const res: Partial<Response> = {};

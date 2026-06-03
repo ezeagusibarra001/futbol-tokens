@@ -1,4 +1,4 @@
-import { Player } from "../player.model";
+import { Player } from "../../player.model";
 
 describe('Player mongoose model', () => {
     it('should default numeric stats to 0 on a new document', () => {

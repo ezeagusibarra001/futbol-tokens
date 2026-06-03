@@ -1,15 +1,15 @@
 import { Types } from 'mongoose';
-import { buy, sell } from '../order.service';
-import { Holding } from '../holding.model';
-import { Order } from '../order.model';
-import * as marketService from '../market.service';
-import * as quoteService from '../../quote/quote.service';
-import * as playerRepo from '../../player/player.repository';
-import * as db from '../../../config/db';
+import { buy, sell } from '../../order.service';
+import { Holding } from '../../holding.model';
+import { Order } from '../../order.model';
+import * as marketService from '../../market.service';
+import * as quoteService from '../../../quote/quote.service';
+import * as playerRepo from '../../../player/player.repository';
+import * as db from '../../../../config/db';
 
-jest.mock('../market.service');
-jest.mock('../../quote/quote.service');
-jest.mock('../../player/player.repository');
+jest.mock('../../market.service');
+jest.mock('../../../quote/quote.service');
+jest.mock('../../../player/player.repository');
 
 beforeEach(() => {
   jest.clearAllMocks();

@@ -5,7 +5,7 @@ import {
   fetchTeamById,
   leagueNameByCode,
   resetClientForTests,
-} from '../football-data.client';
+} from '../../football-data.client';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;

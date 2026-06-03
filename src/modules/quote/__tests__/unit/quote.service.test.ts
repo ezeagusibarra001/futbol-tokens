@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
-import { recalculateAll, getRanking, computeOnDemand, getPlayerQuotes } from '../quote.service';
-import * as playerRepo from '../../player/player.repository';
-import * as quoteRepo from '../quote.repository';
+import { recalculateAll, getRanking, computeOnDemand, getPlayerQuotes } from '../../quote.service';
+import * as playerRepo from '../../../player/player.repository';
+import * as quoteRepo from '../../quote.repository';
 
-jest.mock('../../player/player.repository');
-jest.mock('../quote.repository');
+jest.mock('../../../player/player.repository');
+jest.mock('../../quote.repository');
 
 beforeEach(() => jest.clearAllMocks());
 

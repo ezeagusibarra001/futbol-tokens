@@ -1,13 +1,13 @@
-import { listPlayers, getPlayerById, syncCatalogFromFootballData, syncPlayersFromScrapperFromTeamAndLeague } from "../player.service";
-import * as repo from "../player.repository";
-import * as scrapper from "../player.scrapper";
-import * as fd from "../../integrations/football-data/football-data.client";
-import { cache } from "../../../config/cache";
+import { listPlayers, getPlayerById, syncCatalogFromFootballData, syncPlayersFromScrapperFromTeamAndLeague } from "../../player.service";
+import * as repo from "../../player.repository";
+import * as scrapper from "../../player.scrapper";
+import * as fd from "../../../integrations/football-data/football-data.client";
+import { cache } from "../../../../config/cache";
 
-jest.mock('../player.repository');
-jest.mock('../player.scrapper');
-jest.mock('../../integrations/football-data/football-data.client');
-jest.mock('../../market/market.service', () => ({
+jest.mock('../../player.repository');
+jest.mock('../../player.scrapper');
+jest.mock('../../../integrations/football-data/football-data.client');
+jest.mock('../../../market/market.service', () => ({
     ensureInitialHoldingsForAllPlayers: jest.fn().mockResolvedValue(0),
 }));
 

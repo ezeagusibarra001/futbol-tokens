@@ -1,13 +1,13 @@
 import { Types } from 'mongoose';
-import { getPortfolio, getUserTransactions } from '../portfolio.service';
-import * as holdingRepo from '../holding.repository';
-import * as orderRepo from '../order.repository';
-import * as quoteRepo from '../../quote/quote.repository';
-import { Player } from '../../player/player.model';
+import { getPortfolio, getUserTransactions } from '../../portfolio.service';
+import * as holdingRepo from '../../holding.repository';
+import * as orderRepo from '../../order.repository';
+import * as quoteRepo from '../../../quote/quote.repository';
+import { Player } from '../../../player/player.model';
 
-jest.mock('../holding.repository');
-jest.mock('../order.repository');
-jest.mock('../../quote/quote.repository');
+jest.mock('../../holding.repository');
+jest.mock('../../order.repository');
+jest.mock('../../../quote/quote.repository');
 
 const mkLeanFind = (docs: unknown[]) => ({
   lean: () => ({ exec: () => Promise.resolve(docs) }),

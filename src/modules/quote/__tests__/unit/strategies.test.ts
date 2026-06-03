@@ -1,8 +1,8 @@
-import { IPlayer } from '../../player/player.model';
-import { PerformanceWeightedStrategy } from '../strategies/performance-weighted.strategy';
-import { PositionAwareStrategy } from '../strategies/position-aware.strategy';
-import { getStrategy, DEFAULT_STRATEGY } from '../strategies';
-import { BASE_VALUE } from '../strategies/strategy';
+import { IPlayer } from '../../../player/player.model';
+import { PerformanceWeightedStrategy } from '../../strategies/performance-weighted.strategy';
+import { PositionAwareStrategy } from '../../strategies/position-aware.strategy';
+import { getStrategy, DEFAULT_STRATEGY } from '../../strategies';
+import { BASE_VALUE } from '../../strategies/strategy';
 
 const mkPlayer = (overrides: Partial<IPlayer> = {}): IPlayer => ({
   name: 'X',

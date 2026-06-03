@@ -1,4 +1,4 @@
-import { TtlCache } from '../cache';
+import { TtlCache } from '../../cache';
 
 describe('TtlCache', () => {
   it('returns undefined for a missing key', () => {

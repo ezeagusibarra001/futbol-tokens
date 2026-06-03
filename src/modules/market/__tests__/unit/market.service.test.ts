@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
-import { ensureInitialHoldingsForPlayers, ensureInitialHoldingsForAllPlayers, INITIAL_TOKENS_PER_PLAYER } from '../market.service';
-import * as holdingRepo from '../holding.repository';
-import { User } from '../../auth/user.model';
-import { Player } from '../../player/player.model';
+import { ensureInitialHoldingsForPlayers, ensureInitialHoldingsForAllPlayers, INITIAL_TOKENS_PER_PLAYER } from '../../market.service';
+import * as holdingRepo from '../../holding.repository';
+import { User } from '../../../auth/user.model';
+import { Player } from '../../../player/player.model';
 
-jest.mock('../holding.repository');
+jest.mock('../../holding.repository');
 
 beforeEach(() => jest.clearAllMocks());
 

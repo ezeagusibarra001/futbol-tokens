@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { getPlayersHandler, getPlayerByIdHandler, syncPlayersHandler } from '../player.controller';
-import * as service from '../player.service';
+import { getPlayersHandler, getPlayerByIdHandler, syncPlayersHandler } from '../../player.controller';
+import * as service from '../../player.service';
 
-jest.mock('../player.service');
+jest.mock('../../player.service');
 
 const mkRes = () => {
   const res: Partial<Response> = {};
@@ -40,8 +40,8 @@ describe('player.controller', () => {
     expect(res.json).toHaveBeenCalledWith({ _id: 'x', name: 'P' });
   });
 
-  it('syncPlayersHandler requires league and team', async () => {
-    const req = { body: { league: 'PL' } } as Request;
+  it('syncPlayersHandler requires league', async () => {
+    const req = { body: {  } } as Request;
     const res = mkRes();
     await syncPlayersHandler(req, res, jest.fn());
     expect(res.status).toHaveBeenCalledWith(400);

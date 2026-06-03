@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { errorHandler, httpError, requestLogger } from '../error-handler';
-import { logger } from '../logger';
+import { errorHandler, httpError, requestLogger } from '../../error-handler';
+import { logger } from '../../logger';
 
 const mkRes = () => {
   const res: Partial<Response> = {};

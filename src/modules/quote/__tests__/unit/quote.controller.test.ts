@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { recalculateHandler, getPlayerQuotesHandler, getRankingHandler } from '../quote.controller';
-import * as service from '../quote.service';
+import { recalculateHandler, getPlayerQuotesHandler, getRankingHandler } from '../../quote.controller';
+import * as service from '../../quote.service';
 
-jest.mock('../quote.service');
+jest.mock('../../quote.service');
 
 beforeEach(() => jest.clearAllMocks());
 

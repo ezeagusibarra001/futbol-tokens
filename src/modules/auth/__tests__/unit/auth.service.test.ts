@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { register, login, refresh, logout } from '../auth.service';
-import { User } from '../user.model';
+import { register, login, refresh, logout } from '../../auth.service';
+import { User } from '../../user.model';
 
-jest.mock('../user.model');
+jest.mock('../../user.model');
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
 

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import * as service from '../auth.service';
-import { registerHandler, loginHandler } from '../auth.controller';
+import * as service from '../../auth.service';
+import { registerHandler, loginHandler } from '../../auth.controller';
 
-jest.mock('../auth.service');
+jest.mock('../../auth.service');
 
 const mkRes = () => {
   const res: Partial<Response> = {};

@@ -1,11 +1,11 @@
 import cron from 'node-cron';
-import { runRecalcJob, runSyncJob, startScheduler, stopScheduler } from '../scheduler';
-import * as quoteService from '../../modules/quote/quote.service';
-import * as playerService from '../../modules/player/player.service';
+import { runRecalcJob, runSyncJob, startScheduler, stopScheduler } from '../../scheduler';
+import * as quoteService from '../../../modules/quote/quote.service';
+import * as playerService from '../../../modules/player/player.service';
 
 jest.mock('node-cron');
-jest.mock('../../modules/quote/quote.service');
-jest.mock('../../modules/player/player.service');
+jest.mock('../../../modules/quote/quote.service');
+jest.mock('../../../modules/player/player.service');
 
 const mockedCron = cron as jest.Mocked<typeof cron>;
 
