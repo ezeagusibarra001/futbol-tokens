@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { authenticate, AuthRequest } from '../auth.middleware';
+import { authenticate, AuthRequest } from '../../auth.middleware';
 
 jest.mock('jsonwebtoken');
 
@@ -59,6 +59,19 @@ describe('authenticate middleware', () => {
     authenticate(req, mockRes, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(401);
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
+  it('should return 500 if JWT_ACCESS_SECRET is not set', () => {
+    delete process.env.JWT_ACCESS_SECRET;
+
+    const req = {
+      headers: { authorization: 'Bearer any_token' },
+    } as AuthRequest;
+
+    authenticate(req, mockRes, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
     expect(mockNext).not.toHaveBeenCalled();
   });
 });
