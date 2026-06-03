@@ -1,5 +1,5 @@
 import request from 'supertest';
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import {
   startTestDb,
   stopTestDb,
@@ -15,7 +15,6 @@ jest.setTimeout(120000);
 
 let auth: { userId: string; accessToken: string; refreshToken: string };
 let player1Id: string;
-let player2Id: string;
 let suId: Types.ObjectId;
 
 beforeAll(async () => {
@@ -35,7 +34,6 @@ beforeEach(async () => {
   const p1 = await createTestPlayer({ name: 'Lionel Messi', position: 'FW', team: 'PSG', league: 'Ligue 1', goals: 20, assists: 15, rating: 8.5 });
   const p2 = await createTestPlayer({ name: 'Kylian Mbappe', position: 'FW', team: 'PSG', league: 'Ligue 1', goals: 25, assists: 8, rating: 8.0 });
   player1Id = p1._id.toString();
-  player2Id = p2._id.toString();
 
   await createInitialHolding(suId, p1._id, 100);
   await createInitialHolding(suId, p2._id, 100);

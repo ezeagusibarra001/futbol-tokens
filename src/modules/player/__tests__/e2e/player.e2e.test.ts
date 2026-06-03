@@ -6,7 +6,6 @@ jest.setTimeout(120000);
 
 let auth: { userId: string; accessToken: string; refreshToken: string };
 let player1Id: string;
-let player2Id: string;
 
 beforeAll(async () => {
   await startTestDb();
@@ -22,10 +21,9 @@ beforeEach(async () => {
   auth = await registerAndGetToken();
 
   const p1 = await createTestPlayer({ name: 'Lionel Messi', position: 'FW', team: 'PSG', league: 'Ligue 1', goals: 20, assists: 15, rating: 8.5 });
-  const p2 = await createTestPlayer({ name: 'Kylian Mbappe', position: 'FW', team: 'PSG', league: 'Ligue 1', goals: 25, assists: 8, rating: 8.0 });
-  const p3 = await createTestPlayer({ name: 'Virgil van Dijk', position: 'DF', team: 'Liverpool', league: 'Premier League', goals: 5, assists: 2, rating: 7.8 });
+  await createTestPlayer({ name: 'Kylian Mbappe', position: 'FW', team: 'PSG', league: 'Ligue 1', goals: 25, assists: 8, rating: 8.0 });
+  await createTestPlayer({ name: 'Virgil van Dijk', position: 'DF', team: 'Liverpool', league: 'Premier League', goals: 5, assists: 2, rating: 7.8 });
   player1Id = p1._id.toString();
-  player2Id = p2._id.toString();
 });
 
 describe('GET /players — authorization', () => {

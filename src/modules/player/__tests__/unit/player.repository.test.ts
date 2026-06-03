@@ -1,4 +1,3 @@
-import { Types } from 'mongoose';
 import { Player, IPlayer } from '../../player.model';
 import {
   findPlayers,

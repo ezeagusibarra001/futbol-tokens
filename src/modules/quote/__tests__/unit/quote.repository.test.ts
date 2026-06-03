@@ -62,7 +62,6 @@ describe('quote.repository', () => {
 
     it('queries with date range when from/to provided', async () => {
       const mockExec = jest.fn().mockResolvedValue([]);
-      const mockSort = jest.fn(() => ({ lean: () => ({ exec: mockExec }) }));
       (Quote.find as jest.Mock).mockReturnValue({ sort: () => ({ lean: () => ({ exec: mockExec }) }) });
 
       const from = new Date('2024-01-01');
@@ -76,7 +75,6 @@ describe('quote.repository', () => {
 
     it('queries without date range when not provided', async () => {
       const mockExec = jest.fn().mockResolvedValue([]);
-      const mockSort = jest.fn(() => ({ lean: () => ({ exec: mockExec }) }));
       (Quote.find as jest.Mock).mockReturnValue({ sort: () => ({ lean: () => ({ exec: mockExec }) }) });
 
       await findQuotesByPlayer(pid.toString());
@@ -95,7 +93,6 @@ describe('quote.repository', () => {
 
     it('queries by playerId sorted desc', async () => {
       const mockExec = jest.fn().mockResolvedValue(mockQuote());
-      const mockSort = jest.fn(() => ({ lean: () => ({ exec: mockExec }) }));
       (Quote.findOne as jest.Mock).mockReturnValue({ sort: () => ({ lean: () => ({ exec: mockExec }) }) });
 
       const result = await findLatestQuoteForPlayer(pid.toString());

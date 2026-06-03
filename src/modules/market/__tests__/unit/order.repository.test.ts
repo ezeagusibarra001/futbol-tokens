@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Types, ClientSession } from 'mongoose';
 import { Order, IOrder } from '../../order.model';
 import {
   createOrder,
@@ -38,7 +38,7 @@ describe('order.repository', () => {
 
     it('creates an order with session', async () => {
       (Order.create as jest.Mock).mockResolvedValue([{ ...mockOrderData, _id: 'o1' }]);
-      const ses = { id: 1 } as any;
+      const ses = { id: 1 } as unknown as ClientSession;
 
       const result = await createOrder(mockOrderData, ses);
 
@@ -66,7 +66,7 @@ describe('order.repository', () => {
       const q = queryObj();
       (Order.findOne as jest.Mock).mockReturnValue(q);
 
-      const ses = { id: 1 } as any;
+      const ses = { id: 1 } as unknown as ClientSession;
       await findOrderByIdempotencyKey(uid, 'key-1', ses);
 
       expect(q.session).toHaveBeenCalledWith(ses);
@@ -82,8 +82,6 @@ describe('order.repository', () => {
 
     it('queries by userId with sort', async () => {
       const mockExec = jest.fn().mockResolvedValue([]);
-      const mockSort = jest.fn(() => ({ lean: () => ({ exec: mockExec }) }));
-      const mockLean = jest.fn(() => ({ exec: mockExec }));
       (Order.find as jest.Mock).mockReturnValue({ sort: () => ({ lean: () => ({ exec: mockExec }) }) });
 
       await findOrdersByUser(uid.toString());

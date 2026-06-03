@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Types, ClientSession } from 'mongoose';
 import { Holding } from '../../holding.model';
 import {
   findHoldingsByUser,
@@ -53,7 +53,7 @@ describe('holding.repository', () => {
       const q = queryObj();
       (Holding.findOne as jest.Mock).mockReturnValue(q);
 
-      const ses = { id: 1 } as any;
+      const ses = { id: 1 } as unknown as ClientSession;
       await findHolding(uid, pid, ses);
 
       expect(q.session).toHaveBeenCalledWith(ses);
