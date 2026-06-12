@@ -120,7 +120,7 @@ const run = async () => {
   for (const u of users) {
     const buys = plan[u.id]!;
     for (const [pid, tokens] of Object.entries(buys)) {
-      const order = await buy(u.id, pid, tokens, `demo-${u.id}-${pid}`);
+      const { order } = await buy(u.id, pid, tokens, `demo-${u.id}-${pid}`);
       const pname = players.find(pp => pp._id.toString() === pid)?.name ?? pid;
       console.log(`  • ${u.email.padEnd(34)} BUY ${String(tokens).padStart(3)} de ${pname.padEnd(22)} @ ${fmt(order.pricePerToken)}  total ${fmt(order.total)}`);
     }

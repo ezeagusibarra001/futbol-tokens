@@ -36,3 +36,29 @@ export const getTransactionsHandler = async (req: AuthRequest, res: Response, ne
     next(err);
   }
 };
+
+export const getMyPortfolioHandler = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+    const portfolio = await getPortfolio(req.userId);
+    res.status(200).json(portfolio);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMyTransactionsHandler = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+    const tx = await getUserTransactions(req.userId);
+    res.status(200).json(tx);
+  } catch (err) {
+    next(err);
+  }
+};
