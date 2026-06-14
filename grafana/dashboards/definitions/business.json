@@ -1,0 +1,176 @@
+{
+  "title": "Futbol Tokens - Business",
+  "uid": "futbol-tokens-business",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "title": "Active Sell Posts",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(active_sell_posts)" }
+      ],
+      "valueName": "current",
+      "format": "short",
+      "colors": ["#299c46", "#3274d9", "#d44a3a"],
+      "colorBackground": true
+    },
+    {
+      "title": "Registered Users",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [
+        { "expr": "registered_users_total" }
+      ],
+      "valueName": "current",
+      "format": "short",
+      "colors": ["#299c46", "#3274d9", "#d44a3a"],
+      "colorBackground": true
+    },
+    {
+      "title": "Portfolio Value (total)",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [
+        { "expr": "portfolio_value_total" }
+      ],
+      "valueName": "current",
+      "format": "short",
+      "colors": ["#299c46", "#3274d9", "#d44a3a"],
+      "colorBackground": true
+    },
+    {
+      "title": "Error Rate (4xx / 5xx)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "errors/s", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "sum(rate(http_errors_total{status=~'4..'}[1m]))",
+          "legendFormat": "4xx"
+        },
+        {
+          "expr": "sum(rate(http_errors_total{status=~'5..'}[1m]))",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "title": "Token Trades Rate (1m)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "trades/s", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "sum(rate(token_trades_total[1m])) by (side)",
+          "legendFormat": "{{side}}"
+        }
+      ]
+    },
+    {
+      "title": "DB Operations Rate (1m)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "ops/s", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "sum(rate(db_operations_total[1m])) by (operation)",
+          "legendFormat": "{{operation}}"
+        }
+      ]
+    },
+    {
+      "title": "Holdings per Player",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "barMaxWidth": 50,
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "holdings_per_player",
+          "legendFormat": "{{player_name}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "Active Sell Posts per Player",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "barMaxWidth": 50,
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "active_sell_posts",
+          "legendFormat": "{{player_name}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "HTTP Errors by Path",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        {
+          "expr": "topk(10, sum(rate(http_errors_total[5m])) by (method, path, status))",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true } } }
+      ]
+    }
+  ]
+}

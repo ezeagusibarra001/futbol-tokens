@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../auth/auth.middleware';
 import { buy, createSellPost, cancelSellPost, getSellPosts } from './order.service';
+import { tokenTradesTotal } from '../monitor/monitor.service';
 
 const getUserId = (req: AuthRequest): string | null => req.userId ?? null;
 
@@ -16,6 +17,8 @@ export const buyHandler = async (req: AuthRequest, res: Response, next: NextFunc
     const idempotencyKey = req.header('Idempotency-Key') ?? undefined;
     const result = await buy(userId, playerId, Number(tokens), idempotencyKey, sellOrderId);
     res.status(201).json(result);
+
+    tokenTradesTotal.inc({ side: 'buy', player_id: playerId }, Number(tokens));
   } catch (err) {
     next(err);
   }
@@ -32,6 +35,8 @@ export const createSellPostHandler = async (req: AuthRequest, res: Response, nex
     }
     const order = await createSellPost(userId, playerId, Number(tokens));
     res.status(201).json(order);
+
+    tokenTradesTotal.inc({ side: 'sell', player_id: playerId }, Number(tokens));
   } catch (err) {
     next(err);
   }

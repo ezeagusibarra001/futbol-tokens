@@ -1,0 +1,109 @@
+{
+  "title": "Futbol Tokens - API Overview",
+  "uid": "futbol-tokens-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "title": "HTTP Request Rate",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "req/s", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{method}} {{path}}"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Request Duration (p95)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "ms", "label": "Duration (ms)", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(http_request_duration_ms_bucket[1m]))",
+          "legendFormat": "{{method}} {{path}}"
+        }
+      ]
+    },
+    {
+      "title": "DB Query Duration (p95)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "ms", "label": "Duration (ms)", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(db_query_duration_ms_bucket[1m]))",
+          "legendFormat": "{{operation}} {{collection}}"
+        }
+      ]
+    },
+    {
+      "title": "Token Trades",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "trades/s", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "rate(token_trades_total[1m])",
+          "legendFormat": "{{side}}"
+        }
+      ]
+    },
+    {
+      "title": "Active Users",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "active_users" }
+      ]
+    },
+    {
+      "title": "Node.js Heap Usage",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "bytes", "label": "Heap", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        { "expr": "nodejs_heap_size_bytes{space='used'}" },
+        { "expr": "nodejs_heap_size_bytes{space='total'}" }
+      ]
+    }
+  ]
+}

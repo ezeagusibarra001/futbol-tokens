@@ -1,0 +1,162 @@
+{
+  "title": "Futbol Tokens - System",
+  "uid": "futbol-tokens-system",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "title": "CPU Usage",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "percent", "label": "CPU %", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "rate(process_cpu_user_seconds_total[1m]) * 100",
+          "legendFormat": "user"
+        },
+        {
+          "expr": "rate(process_cpu_system_seconds_total[1m]) * 100",
+          "legendFormat": "system"
+        }
+      ]
+    },
+    {
+      "title": "Memory Usage",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "bytes", "label": "Memory", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        { "expr": "process_resident_memory_bytes", "legendFormat": "RSS" },
+        { "expr": "nodejs_heap_size_bytes{space='used'}", "legendFormat": "heap used" },
+        { "expr": "nodejs_heap_size_bytes{space='total'}", "legendFormat": "heap total" },
+        { "expr": "nodejs_external_memory_bytes", "legendFormat": "external" }
+      ]
+    },
+    {
+      "title": "Event Loop Lag",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "s", "label": "Lag (s)", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "nodejs_event_loop_lag_seconds",
+          "legendFormat": "lag"
+        }
+      ]
+    },
+    {
+      "title": "GC Duration",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "s", "label": "GC (s/s)", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "rate(nodejs_gc_duration_seconds_sum[1m])",
+          "legendFormat": "{{gc}}"
+        }
+      ]
+    },
+    {
+      "title": "Open Handles",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "Handles", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        { "expr": "nodejs_active_handles", "legendFormat": "handles" },
+        { "expr": "nodejs_active_requests", "legendFormat": "requests" }
+      ]
+    },
+    {
+      "title": "Event Loop Utilization",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "percentunit", "label": "Utilization", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "rate(nodejs_event_loop_utilization[1m])",
+          "legendFormat": "utilization"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Request Rate",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "short", "label": "req/s", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Duration (avg)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "lines": true,
+      "linewidth": 1,
+      "points": false,
+      "xaxis": { "show": true },
+      "yaxes": [
+        { "format": "ms", "label": "Duration (ms)", "show": true },
+        { "format": "short", "show": true }
+      ],
+      "targets": [
+        {
+          "expr": "rate(http_request_duration_ms_sum[1m]) / rate(http_request_duration_ms_count[1m])",
+          "legendFormat": "{{method}} {{path}}"
+        }
+      ]
+    }
+  ]
+}

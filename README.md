@@ -128,6 +128,12 @@ curl http://localhost:3000/users/<userId>/portfolio \
 | POST | `/orders/sell` | Vender tokens |
 | GET | `/users/:id/portfolio` | Portfolio del usuario (solo el dueño) |
 | GET | `/users/:id/transactions` | Historial de orders del usuario |
+| GET | `/health` | Health check con estado de la DB |
+| GET | `/health/live` | Liveness probe |
+| GET | `/health/ready` | Readiness probe |
+| GET | `/metrics` | Métricas en formato Prometheus |
+| GET | `/monitor/info` | Información del sistema (node, memoria, CPUs) |
+| GET | `/monitor/stats` | Estadísticas del proceso (uptime, PID) |
 
 ## Estrategias de valuación
 
@@ -146,7 +152,7 @@ npx tsc --noEmit      # typecheck
 npm run lint          # eslint
 ```
 
-110 tests cubren modelos, servicios, controllers, estrategias, scheduler, cache, logger y error handler.
+257 tests (unit + e2e) cubren modelos, servicios, controllers, estrategias, scheduler, cache, logger, error handler, auditoría y arquitectura.
 
 ## Estructura
 
@@ -172,9 +178,71 @@ src/
       football-data/    Cliente API oficial
 ```
 
+## Monitoreo con Prometheus + Grafana
+
+El proyecto incluye configuración lista para monitorear la API con Prometheus y Grafana vía Docker Compose.
+
+```bash
+docker compose up -d prometheus grafana
+```
+
+| Servicio | Puerto | URL |
+|---|---|---|
+| Prometheus | `9096` | http://localhost:9096 |
+| Grafana | `3001` | http://localhost:3001 (admin/admin) |
+
+Grafana provisiona automáticamente el datasource de Prometheus y el dashboard **"Futbol Tokens - API Overview"** con paneles de:
+
+- HTTP request rate y duración (p95)
+- DB query duration
+- Token trades (buy/sell)
+- Active users
+- Node.js heap usage
+
+### Métricas custom expuestas en `/metrics`
+
+| Métrica | Tipo | Labels |
+|---|---|---|
+| `http_request_duration_ms` | Histogram | method, path, status |
+| `http_requests_total` | Counter | method, path, status |
+| `db_query_duration_ms` | Histogram | operation, collection |
+| `token_trades_total` | Counter | side, player_id |
+| `active_users` | Gauge | — |
+
+Además se recolectan las default metrics de Node.js (heap, event loop, etc.).
+
+## Auditoría de Web-Services
+
+Cada request a la API se registra automáticamente en `logs/audit-{fecha}.log` con formato JSON por línea:
+
+```json
+{"timestamp":"2026-06-14T22:10:52.027Z",
+ "user":"anonymous",
+ "operation":"POST /register",
+ "parameters":{"email":"testuser@test.com","password":"***"},
+ "executionTime":126,
+ "status":201}
+```
+
+- Campos sensibles (`password`, `token`, `secret`) se enmascaran
+- Usuarios autenticados muestran su `userId`; no autenticados son `anonymous`
+- Rotación diaria automática con límite de 10 MB por archivo
+- Ruta configurable via `AUDIT_LOG_DIR`
+
+## Test de arquitectura
+
+`src/__tests__/unit/architecture.test.ts` verifica automáticamente las reglas estructurales del proyecto:
+
+- **Naming**: todos los archivos siguen `feature.layer.ts`
+- **Layering**: controller no importa repository/model; service no importa controller/routes/middleware; repository solo importa model
+- **Named exports**: service/repository/model/controller/middleware usan solo exports nombrados
+
+Se ejecuta con el resto de los tests (`npm test`). Si alguien rompe una regla, el test falla antes de llegar a code review.
+
 ## Observabilidad y resiliencia
 
 - **Logs**: cada request loguea método/path/status/ms. Errores 5xx loguean stack; 4xx loguean como warn.
+- **Auditoría**: registro estructurado de todas las operaciones con timestamp, usuario, parámetros y tiempo de ejecución.
 - **Tolerancia a fallas externas**: Football-Data y WhoScored capturan errores y retornan vacío para que la app siga sirviendo desde la BD local.
 - **Concurrencia**: orders usan `session.withTransaction()` y decremento atómico con `findOneAndUpdate({tokens:{$gte:n}})`.
 - **Idempotency**: orders aceptan header `Idempotency-Key` (único por usuario).

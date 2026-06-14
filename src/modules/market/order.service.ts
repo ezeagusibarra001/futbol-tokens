@@ -8,7 +8,6 @@ import { withTx } from '../../config/db';
 import {
   findActiveSellOrders,
   findActiveSellOrderById,
-  updateOrderStatus,
 } from './order.repository';
 
 const err = (msg: string, status: number) => Object.assign(new Error(msg), { status });
@@ -248,7 +247,7 @@ export const buy = async (
   }
 
   const activeSells = await findActiveSellOrders(playerOid);
-  const matchingSell = activeSells.find(s => (s.remainingTokens ?? 0) >= tokens);
+  const matchingSell = activeSells.find(s => !s.userId.equals(buyerId) && (s.remainingTokens ?? 0) >= tokens);
   if (matchingSell) {
     return buyFromSellOrder(buyerId, matchingSell._id, tokens, idempotencyKey);
   }
