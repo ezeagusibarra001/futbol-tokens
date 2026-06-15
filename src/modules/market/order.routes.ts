@@ -107,6 +107,29 @@ import { authenticate } from '../auth/auth.middleware';
  *       404: { description: Active sell post not found }
  */
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Order:
+ *       type: object
+ *       properties:
+ *         _id: { type: string }
+ *         userId: { type: string }
+ *         playerId: { type: string }
+ *         side: { type: string, enum: [BUY, SELL] }
+ *         tokens: { type: integer }
+ *         remainingTokens: { type: integer }
+ *         pricePerToken: { type: number }
+ *         total: { type: number }
+ *         status: { type: string, enum: [ACTIVE, FILLED, CANCELLED] }
+ *         idempotencyKey: { type: string }
+ *         strategyName: { type: string }
+ *         strategyVersion: { type: string }
+ *         createdAt: { type: string, format: date-time }
+ *         updatedAt: { type: string, format: date-time }
+ */
+
 const router = Router();
 router.post('/buy', authenticate, buyHandler);
 router.post('/sell', authenticate, createSellPostHandler);
