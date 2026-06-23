@@ -5,9 +5,11 @@ import { getSuperuser } from './market.service';
 import { findPlayerById } from '../player/player.repository';
 import { getEffectivePrice } from '../quote/quote.service';
 import { withTx } from '../../config/db';
+import { ClientSession } from 'mongoose';
 import {
   findActiveSellOrders,
   findActiveSellOrderById,
+  findActiveBuyOrders,
 } from './order.repository';
 
 const err = (msg: string, status: number) => Object.assign(new Error(msg), { status });
@@ -16,6 +18,44 @@ const validateInput = (userId: string, playerId: string, tokens: number) => {
   if (!Types.ObjectId.isValid(userId)) throw err('Invalid userId', 400);
   if (!Types.ObjectId.isValid(playerId)) throw err('Invalid playerId', 400);
   if (!Number.isInteger(tokens) || tokens <= 0) throw err('tokens must be a positive integer', 400);
+};
+
+/**
+ * Mueve `tokens` desde el escrow del superusuario hacia el comprador, acreditando el holding
+ * (recalculando el precio promedio). Usado al matchear órdenes P2P (sells ↔ bids).
+ */
+const creditBuyerFromEscrow = async (
+  session: ClientSession,
+  buyerId: Types.ObjectId,
+  playerOid: Types.ObjectId,
+  tokens: number,
+  pricePerToken: number
+): Promise<void> => {
+  const total = Number((pricePerToken * tokens).toFixed(6));
+  const su = await getSuperuser();
+  const suId = su._id as Types.ObjectId;
+
+  const decremented = await Holding.findOneAndUpdate(
+    { userId: suId, playerId: playerOid, tokens: { $gte: tokens } },
+    { $inc: { tokens: -tokens } },
+    { returnDocument: 'after', session }
+  ).exec();
+  if (!decremented) throw err('Escrow balance error', 500);
+
+  const buyerHolding = await Holding.findOne({ userId: buyerId, playerId: playerOid }).session(session).exec();
+  if (buyerHolding) {
+    const newTokens = buyerHolding.tokens + tokens;
+    buyerHolding.avgBuyPrice = newTokens > 0
+      ? Number((((buyerHolding.avgBuyPrice * buyerHolding.tokens) + total) / newTokens).toFixed(6))
+      : 0;
+    buyerHolding.tokens = newTokens;
+    await buyerHolding.save({ session });
+  } else {
+    await Holding.create(
+      [{ userId: buyerId, playerId: playerOid, tokens, avgBuyPrice: pricePerToken }],
+      { session }
+    );
+  }
 };
 
 export const createSellPost = async (
@@ -56,16 +96,38 @@ export const createSellPost = async (
       );
     }
 
+    // Matchear contra órdenes de compra (bids) que estaban esperando, FIFO, al precio vigente
+    let remaining = tokens;
+    const bids = await findActiveBuyOrders(playerOid);
+    for (const bid of bids) {
+      if (remaining <= 0) break;
+      if (bid.userId.equals(sellerId)) continue;
+      const amount = Math.min(remaining, bid.remainingTokens ?? bid.tokens);
+      if (amount <= 0) continue;
+      const filledBid = await Order.findOneAndUpdate(
+        { _id: bid._id, status: 'ACTIVE', remainingTokens: { $gte: amount } },
+        { $inc: { remainingTokens: -amount } },
+        { returnDocument: 'after', session }
+      ).exec();
+      if (!filledBid) continue;
+      if (filledBid.remainingTokens === 0) {
+        filledBid.status = 'FILLED';
+        await filledBid.save({ session });
+      }
+      await creditBuyerFromEscrow(session, filledBid.userId, playerOid, amount, price.value);
+      remaining -= amount;
+    }
+
     const [order] = await Order.create(
       [{
         userId: sellerId,
         playerId: playerOid,
         side: 'SELL',
         tokens,
-        remainingTokens: tokens,
+        remainingTokens: remaining,
         pricePerToken: price.value,
         total,
-        status: 'ACTIVE',
+        status: remaining === 0 ? 'FILLED' : 'ACTIVE',
         ...omitIdem(undefined),
         strategyName: price.strategyName,
         strategyVersion: price.strategyVersion,
@@ -74,6 +136,104 @@ export const createSellPost = async (
     );
     return order;
   });
+};
+
+type BidResult = {
+  source: 'p2p' | 'pending';
+  order: IOrderDoc;
+  filled: number;
+};
+
+/**
+ * Crea una orden de compra (bid). Si hay órdenes de venta compatibles se ejecuta al instante
+ * (P2P, al precio vigente). El remanente sin matchear queda como orden ACTIVE esperando un sell.
+ */
+export const createBid = async (
+  userId: string,
+  playerId: string,
+  tokens: number
+): Promise<BidResult> => {
+  validateInput(userId, playerId, tokens);
+
+  const player = await findPlayerById(playerId);
+  if (!player) throw err('Player not found', 404);
+
+  const price = await getEffectivePrice(playerId);
+  const su = await getSuperuser();
+  const buyerId = new Types.ObjectId(userId);
+  const playerOid = new Types.ObjectId(playerId);
+  const suId = su._id as Types.ObjectId;
+
+  if (buyerId.equals(suId)) throw err('Superuser cannot place bids', 400);
+
+  return withTx(async session => {
+    let remaining = tokens;
+    let filled = 0;
+
+    const sells = await findActiveSellOrders(playerOid);
+    for (const sell of sells) {
+      if (remaining <= 0) break;
+      if (sell.userId.equals(buyerId)) continue;
+      const amount = Math.min(remaining, sell.remainingTokens ?? 0);
+      if (amount <= 0) continue;
+      const filledSell = await Order.findOneAndUpdate(
+        { _id: sell._id, status: 'ACTIVE', remainingTokens: { $gte: amount } },
+        { $inc: { remainingTokens: -amount } },
+        { returnDocument: 'after', session }
+      ).exec();
+      if (!filledSell) continue;
+      if (filledSell.remainingTokens === 0) {
+        filledSell.status = 'FILLED';
+        await filledSell.save({ session });
+      }
+      await creditBuyerFromEscrow(session, buyerId, playerOid, amount, price.value);
+      remaining -= amount;
+      filled += amount;
+    }
+
+    const [order] = await Order.create(
+      [{
+        userId: buyerId,
+        playerId: playerOid,
+        side: 'BUY',
+        tokens,
+        remainingTokens: remaining,
+        pricePerToken: price.value,
+        total: Number((price.value * filled).toFixed(6)),
+        status: remaining === 0 ? 'FILLED' : 'ACTIVE',
+        strategyName: price.strategyName,
+        strategyVersion: price.strategyVersion,
+      }],
+      { session }
+    );
+    return { source: filled > 0 ? 'p2p' : 'pending', order, filled };
+  });
+};
+
+export const cancelBid = async (
+  userId: string,
+  bidId: string
+): Promise<IOrderDoc> => {
+  if (!Types.ObjectId.isValid(bidId)) throw err('Invalid bidId', 400);
+  if (!Types.ObjectId.isValid(userId)) throw err('Invalid userId', 400);
+
+  const bid = await Order.findOne({ _id: new Types.ObjectId(bidId), side: 'BUY', status: 'ACTIVE' }).exec();
+  if (!bid) throw err('Active bid not found', 404);
+  if (!bid.userId.equals(new Types.ObjectId(userId))) throw err('Not your bid', 403);
+
+  bid.status = 'CANCELLED';
+  bid.remainingTokens = 0;
+  await bid.save();
+  return bid;
+};
+
+export const getBids = async (playerId?: string): Promise<IOrderDoc[]> => {
+  let pid: Types.ObjectId | undefined;
+  if (playerId) {
+    if (!Types.ObjectId.isValid(playerId)) throw err('Invalid playerId', 400);
+    pid = new Types.ObjectId(playerId);
+  }
+  return findActiveBuyOrders(pid);
 };
 
 type P2pBuyResult = {

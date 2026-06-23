@@ -46,6 +46,21 @@ export const findActiveSellOrderById = (
   return Order.findOne({ _id: id, side: 'SELL', status: 'ACTIVE' }).exec();
 };
 
+export const findActiveBuyOrders = (
+  playerId?: Types.ObjectId
+): Promise<IOrderDoc[]> => {
+  const filter: Record<string, unknown> = {
+    side: 'BUY',
+    status: 'ACTIVE',
+    remainingTokens: { $gte: 1 },
+  };
+  if (playerId) filter.playerId = playerId;
+  return Order.find(filter)
+    .sort({ createdAt: 1 })
+    .lean<IOrderDoc[]>()
+    .exec();
+};
+
 export const updateOrderStatus = (
   id: Types.ObjectId,
   status: 'FILLED' | 'CANCELLED',

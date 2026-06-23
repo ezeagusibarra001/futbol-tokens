@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { buy, createSellPost, cancelSellPost } from '../../order.service';
+import { buy, createSellPost, cancelSellPost, createBid } from '../../order.service';
 import { Holding } from '../../holding.model';
 import { Order } from '../../order.model';
 import * as marketService from '../../market.service';
@@ -143,6 +143,7 @@ describe('order.service - createSellPost', () => {
     mockHoldingFindOneAndUpdate({ _id: 'h-user', tokens: 7 });
     const suHolding = { tokens: 100, save: jest.fn().mockResolvedValue(undefined) };
     mockHoldingFindOne(suHolding);
+    mockOrderFind([]); // no resting bids to match
     jest.spyOn(Order, 'create').mockResolvedValueOnce([{ _id: 'sell-1', side: 'SELL', status: 'ACTIVE' }] as never);
 
     const order = await createSellPost(userId.toString(), playerId.toString(), 3);
@@ -218,5 +219,60 @@ describe('order.service - cancelSellPost', () => {
   it('throws 404 when sell order not found', async () => {
     jest.spyOn(Order, 'findOne').mockReturnValueOnce(mockFindOneReturn(null) as unknown as ReturnType<typeof Order.findOne>);
     await expect(cancelSellPost(userId.toString(), new Types.ObjectId().toString())).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+const mockOrderFindOneAndUpdate = (returnValue: unknown) => {
+  jest.spyOn(Order, 'findOneAndUpdate').mockReturnValueOnce({
+    exec: () => Promise.resolve(returnValue),
+  } as unknown as ReturnType<typeof Order.findOneAndUpdate>);
+};
+
+describe('order.service - createBid', () => {
+  it('rejects invalid input', async () => {
+    await expect(createBid('bad', playerId.toString(), 5)).rejects.toMatchObject({ status: 400 });
+    await expect(createBid(userId.toString(), playerId.toString(), 0)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('forbids superuser from placing bids', async () => {
+    setBasics();
+    await expect(createBid(suId.toString(), playerId.toString(), 1)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('creates a pending bid when there are no matching sells', async () => {
+    setBasics(10);
+    mockOrderFind([]); // no active sells
+    jest.spyOn(Order, 'create').mockResolvedValueOnce([
+      { _id: 'bid-1', side: 'BUY', status: 'ACTIVE', remainingTokens: 5 },
+    ] as never);
+
+    const result = await createBid(userId.toString(), playerId.toString(), 5);
+    expect(result.source).toBe('pending');
+    expect(result.filled).toBe(0);
+    expect(result.order).toMatchObject({ side: 'BUY', status: 'ACTIVE' });
+  });
+
+  it('fills against a resting sell at the current quote (p2p)', async () => {
+    setBasics(20);
+    const sellerId = new Types.ObjectId();
+    const sellId = new Types.ObjectId();
+    mockOrderFind([{ _id: sellId, userId: sellerId, remainingTokens: 10, tokens: 10 }]);
+    mockOrderFindOneAndUpdate({ _id: sellId, remainingTokens: 5, status: 'ACTIVE', save: jest.fn() });
+    // creditBuyerFromEscrow: escrow decrement ok, buyer has no prior holding
+    mockHoldingFindOneAndUpdate({ _id: 'escrow', tokens: 90 });
+    mockHoldingFindOne(null);
+    jest.spyOn(Holding, 'create').mockResolvedValueOnce([{ _id: 'h-buyer' }] as never);
+    jest.spyOn(Order, 'create').mockResolvedValueOnce([
+      { _id: 'bid-2', side: 'BUY', status: 'FILLED', remainingTokens: 0 },
+    ] as never);
+
+    const result = await createBid(userId.toString(), playerId.toString(), 5);
+    expect(result.source).toBe('p2p');
+    expect(result.filled).toBe(5);
+    expect(Holding.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: suId, tokens: { $gte: 5 } }),
+      { $inc: { tokens: -5 } },
+      expect.anything()
+    );
   });
 });

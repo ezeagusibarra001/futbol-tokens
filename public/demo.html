@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⚽ Fútbol Tokens — Demo en vivo</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg-soft: #111726;
+    --panel: #161d2e;
+    --panel-2: #1d2640;
+    --line: #27314d;
+    --txt: #e7ecf6;
+    --muted: #8b96b3;
+    --accent: #5b8cff;
+    --accent-2: #7c5bff;
+    --green: #2ee6a6;
+    --red: #ff5d73;
+    --gold: #ffd166;
+    --p2p: #ff9e64;
+    --shadow: 0 10px 40px rgba(0,0,0,.45);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(124,91,255,.18), transparent 60%),
+      radial-gradient(1000px 500px at -10% 10%, rgba(91,140,255,.16), transparent 55%),
+      var(--bg);
+    color: var(--txt);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    min-height: 100vh; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 26px 22px 90px; }
+
+  header.hero { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .logo { width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center; font-size: 30px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: var(--shadow); animation: float 4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
+  .brand h1 { font-size: 22px; margin: 0; letter-spacing: .3px; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+  .controls { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+  select, .pill, .btn { background: var(--panel); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 13px; outline: none; }
+  label.field { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  label.field select { padding: 7px 9px; }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); display: inline-block; margin-right: 7px; transition: background .3s; }
+  .status-dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .jornada { font-weight: 800; color: var(--gold); }
+
+  .btn { cursor: pointer; transition: transform .12s, border-color .2s, background .2s, filter .2s; font-weight: 600; }
+  .btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.primary { border: none; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: var(--shadow); }
+  .btn.league { border: none; color: #0a0e1a; background: linear-gradient(135deg, var(--green), #36d1c4); box-shadow: var(--shadow); font-weight: 800; }
+  .btn.league.on { background: linear-gradient(135deg, var(--red), #ff7a59); color: #fff; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ filter: brightness(1) } 50%{ filter: brightness(1.18) } }
+
+  .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 6px 0 22px; }
+  .step-btn { position: relative; border: 1px solid var(--line); background: var(--panel); color: var(--txt); border-radius: var(--radius); padding: 13px 12px; cursor: pointer; text-align: left; transition: transform .15s, border-color .2s, box-shadow .2s; display: flex; flex-direction: column; gap: 5px; min-height: 86px; }
+  .step-btn:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--accent); box-shadow: var(--shadow); }
+  .step-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .step-btn.done { border-color: rgba(46,230,166,.5); }
+  .step-btn.done::after { content: "✓"; position: absolute; top: 10px; right: 12px; color: var(--green); font-weight: 700; }
+  .step-btn.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,140,255,.25), var(--shadow); }
+  .step-num { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .step-ico { font-size: 21px; }
+  .step-title { font-size: 13px; font-weight: 600; line-height: 1.2; }
+
+  .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 1040px){ .grid { grid-template-columns: 1fr; } .steps { grid-template-columns: repeat(3,1fr); } }
+
+  .panel { background: linear-gradient(180deg, var(--panel), var(--bg-soft)); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .panel h2 { font-size: 13px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+
+  .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(225px,1fr)); gap: 13px; }
+  .pcard { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 13px; position: relative; overflow: hidden; animation: pop .45s ease both; }
+  @keyframes pop { from { opacity: 0; transform: scale(.92) translateY(8px); } to { opacity: 1; transform: none; } }
+  .pcard .league { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .pcard .pname { font-size: 16px; font-weight: 700; margin: 3px 0 1px; }
+  .pcard .team { font-size: 12px; color: var(--muted); }
+  .pcard .pos { position: absolute; top: 12px; right: 12px; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(91,140,255,.18); color: var(--accent); border: 1px solid rgba(91,140,255,.35); }
+  .pcard .value { font-size: 25px; font-weight: 800; margin-top: 10px; letter-spacing: .5px; transition: color .3s; }
+  .pcard .value .cur { color: var(--muted); font-size: 14px; font-weight: 600; }
+  .pcard .score { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .pcard .delta { font-size: 12px; font-weight: 700; margin-top: 4px; height: 16px; }
+  .pcard .delta.up { color: var(--green); } .pcard .delta.down { color: var(--red); }
+  .pcard .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.06); margin-top: 10px; overflow: hidden; }
+  .pcard .bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .9s cubic-bezier(.2,.8,.2,1); }
+  .pcard .stats { display: flex; gap: 9px; margin-top: 11px; flex-wrap: wrap; }
+  .pcard .stat { font-size: 11px; color: var(--muted); }
+  .pcard .stat b { color: var(--txt); font-size: 13px; }
+  .pcard .stat.bumped b { animation: bump .7s ease; color: var(--gold); }
+  @keyframes bump { 0%{ transform: scale(1) } 30%{ transform: scale(1.6) } 100%{ transform: scale(1) } }
+  .pcard .cmp { margin-top: 10px; display: none; gap: 6px; font-size: 11px; }
+  .pcard.has-cmp .cmp { display: flex; }
+  .cmp .chip { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; text-align: center; }
+  .cmp .chip .t { color: var(--muted); font-size: 9.5px; letter-spacing: .5px; text-transform: uppercase; }
+  .cmp .chip .v { font-weight: 800; font-size: 13px; }
+  .cmp .chip.win { border-color: rgba(46,230,166,.55); background: rgba(46,230,166,.08); }
+  .cmp .chip.win .v { color: var(--green); }
+  .flash-up { animation: flashUp .8s ease; } .flash-down { animation: flashDown .8s ease; }
+  @keyframes flashUp { 0%{ box-shadow: 0 0 0 3px rgba(46,230,166,.6) } 100%{ box-shadow: 0 0 0 0 rgba(46,230,166,0) } }
+  @keyframes flashDown { 0%{ box-shadow: 0 0 0 3px rgba(255,93,115,.6) } 100%{ box-shadow: 0 0 0 0 rgba(255,93,115,0) } }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 26px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
+
+  .users { display: flex; flex-direction: column; gap: 11px; }
+  .ucard { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; }
+  .ucard .uhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .ucard .uemail { font-size: 13px; font-weight: 600; }
+  .ucard .upnl { font-size: 14px; font-weight: 800; }
+  .ucard .upnl.up { color: var(--green); } .ucard .upnl.down { color: var(--red); }
+  .ucard table { width: 100%; border-collapse: collapse; margin-top: 7px; font-size: 12px; }
+  .ucard th { text-align: right; color: var(--muted); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .ucard th:first-child, .ucard td:first-child { text-align: left; }
+  .ucard td { padding: 5px 6px; border-bottom: 1px solid rgba(39,49,77,.5); }
+  .ucard td.pos-pnl { font-weight: 700; } .ucard td.up { color: var(--green); } .ucard td.down { color: var(--red); }
+  .badge { font-size: 10px; padding: 2px 7px; border-radius: 999px; background: rgba(124,91,255,.18); color: #b9a8ff; border: 1px solid rgba(124,91,255,.35); }
+
+  /* order book (dos lados) */
+  .book { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px){ .book { grid-template-columns: 1fr; } }
+  .ob-col h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  .ob-col.bids h3 { color: var(--green); } .ob-col.asks h3 { color: var(--p2p); }
+  .ob-list { display: flex; flex-direction: column; gap: 7px; }
+  .ob-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; animation: pop .35s ease both; }
+  .ob-row.bid { border-left: 3px solid var(--green); } .ob-row.ask { border-left: 3px solid var(--p2p); }
+  .ob-row.hit { animation: obHit .9s ease; }
+  @keyframes obHit { 0%{ box-shadow: 0 0 0 3px rgba(255,209,102,.7) } 100%{ box-shadow: 0 0 0 0 rgba(255,209,102,0) } }
+  .ob-row .who { font-size: 11.5px; line-height: 1.3; } .ob-row.bid .who b { color: var(--green); } .ob-row.ask .who b { color: var(--p2p); }
+  .ob-row .who span { color: var(--muted); }
+  .ob-row .qty { text-align: right; font-size: 11px; color: var(--muted); }
+  .ob-row .qty b { font-size: 14px; color: var(--txt); display: block; }
+  .ob-empty { color: var(--muted); font-size: 12px; padding: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+
+  /* free actions */
+  .actions { display: flex; gap: 9px; flex-wrap: wrap; }
+  .actions .btn { font-size: 13px; }
+
+  .console { margin-top: 16px; background: #070a12; border: 1px solid var(--line); border-radius: 14px; padding: 14px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; height: 190px; overflow-y: auto; }
+  .console .row { padding: 2px 0; white-space: pre-wrap; line-height: 1.45; }
+  .console .m { color: var(--accent); } .console .ok { color: var(--green); } .console .er { color: var(--red); } .console .dim { color: var(--muted); } .console .p2p { color: var(--p2p); }
+  .console .verb { display: inline-block; min-width: 46px; font-weight: 700; }
+
+  /* toasts */
+  #toasts { position: fixed; top: 18px; right: 18px; display: flex; flex-direction: column; gap: 9px; z-index: 50; max-width: 340px; }
+  .toast { background: var(--panel-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 11px 14px; font-size: 13px; box-shadow: var(--shadow); animation: slideIn .3s ease both; }
+  .toast.p2p { border-left-color: var(--p2p); }
+  .toast.sys { border-left-color: var(--accent); }
+  .toast.warn { border-left-color: var(--gold); }
+  .toast.bye { animation: slideOut .3s ease forwards; }
+  @keyframes slideIn { from { opacity:0; transform: translateX(30px); } to { opacity:1; transform:none; } }
+  @keyframes slideOut { to { opacity:0; transform: translateX(30px); } }
+  .legend { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="toasts"></div>
+<div class="wrap">
+  <header class="hero">
+    <div class="brand">
+      <div class="logo">⚽</div>
+      <div>
+        <h1>Fútbol Tokens <span style="opacity:.5">·</span> Demo en vivo</h1>
+        <p>Valoración de mercado de jugadores — mercado P2P, estrategias y liga en vivo</p>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="pill"><span class="status-dot" id="statusDot"></span><span id="statusText">desconectado</span></label>
+      <span class="pill">Jornada <span class="jornada" id="jornada">0</span></span>
+      <label class="field">Estrategia
+        <select id="strategy" title="Cambiala para ver cómo se recalcula todo">
+          <option value="PerformanceWeighted">PerformanceWeighted</option>
+          <option value="PositionAware">PositionAware</option>
+        </select>
+      </label>
+      <label class="field">Velocidad
+        <select id="speed">
+          <option value="1.8">🐢 Lento</option>
+          <option value="1" selected>🚶 Normal</option>
+          <option value="0.45">🐇 Rápido</option>
+        </select>
+      </label>
+      <button class="btn" id="compare" disabled>⚖️ Comparar</button>
+      <button class="btn primary" id="runAll">▶ Correr intro</button>
+      <button class="btn league" id="league" disabled>♾️ Liga en vivo</button>
+    </div>
+  </header>
+
+  <div class="steps" id="steps"></div>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>📊 Mercado de jugadores <span class="legend" id="stratTag"></span></h2>
+        <div id="players" class="players">
+          <div class="empty">Tocá <b>1 · Reset & sembrar</b> para arrancar el campeonato.</div>
+        </div>
+        <div class="legend">El <b>valor</b> es la cotización (depende de la estrategia). La barra es relativa al líder. Cambiá la estrategia o tocá <b>⚖️ Comparar</b> para ver cómo varía el cálculo.</div>
+      </section>
+
+      <section class="panel">
+        <h2>🤝 Order book P2P — órdenes activas</h2>
+        <div id="book" class="book"></div>
+        <div class="legend">🟢 <b>Compras (bids)</b>: alguien quiere comprar y espera un vendedor. 🟠 <b>Ventas (asks)</b>: tokens en venta esperando comprador. Cuando se cruzan, matchean al precio de la cotización.</div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>🎮 Trading libre <span class="badge" id="freeState">bloqueado</span></h2>
+        <div class="actions" id="actions">
+          <button class="btn" data-act="p2p" disabled>🤝 Ronda P2P</button>
+          <button class="btn" data-act="sell" disabled>📤 Poner orden de venta</button>
+          <button class="btn" data-act="bid" disabled>📥 Poner orden de compra</button>
+          <button class="btn" data-act="sys" disabled>🏦 Compra al sistema</button>
+          <button class="btn" data-act="jornada" disabled>⏱️ Avanzar jornada</button>
+        </div>
+        <div class="legend">Disponibles una vez sembrado el mercado. Repetí lo que quieras, en cualquier orden.</div>
+      </section>
+
+      <section class="panel">
+        <h2>👜 Inversores & Portfolios</h2>
+        <div id="users" class="users">
+          <div class="empty">Los 4 usuarios demo aparecen acá tras el reset.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="console" id="console">
+    <div class="row dim">› consola lista. Cada llamada a la API se loguea acá.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- estado ----------
+  const state = {
+    players: [], users: [], tokens: {},
+    quotes: {}, prevQuotes: {}, statsBaseline: {},
+    portfolios: {}, sellPosts: [], bids: [], compare: null,
+    jornada: 0, seeded: false,
+  };
+
+  const BUY_PLAN = [
+    { 0: 5, 1: 3 }, { 1: 4, 2: 6 }, { 2: 2, 3: 5, 4: 3 }, { 0: 4, 3: 4, 4: 5 },
+  ];
+
+  const STEPS = [
+    { id: 'reset',   ico: '🔄', title: 'Reset & sembrar',   fn: stepReset },
+    { id: 'initial', ico: '📈', title: 'Cotización inicial', fn: stepInitialQuote, needs: 'reset' },
+    { id: 'buy',     ico: '🛒', title: 'Compras iniciales',  fn: stepBuy,          needs: 'initial' },
+    { id: 'time',    ico: '⏱️', title: 'Pasa el tiempo',     fn: stepAdvance,      needs: 'buy' },
+    { id: 'recalc',  ico: '♻️', title: 'Recalcular',         fn: stepRecalc,       needs: 'time' },
+    { id: 'final',   ico: '🏆', title: 'Ranking & P&L',      fn: stepFinal,        needs: 'recalc' },
+  ];
+  const done = new Set();
+  let running = false;
+  let leagueOn = false;
+  let leagueTimer = null;
+  let idemCounter = 0;
+
+  // ---------- helpers ----------
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const fmt = (n) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const speed = () => Number($('#speed').value);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms * speed()));
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const shortName = (n) => n.replace(/^Demo /, '');
+  const userShort = (email) => email.split('@')[0];
+
+  function log(msg, cls = '') {
+    const c = $('#console');
+    const row = document.createElement('div');
+    row.className = 'row ' + cls; row.innerHTML = msg;
+    c.appendChild(row); c.scrollTop = c.scrollHeight;
+  }
+
+  function toast(msg, kind = '') {
+    const t = document.createElement('div');
+    t.className = 'toast ' + kind; t.innerHTML = msg;
+    $('#toasts').appendChild(t);
+    setTimeout(() => { t.classList.add('bye'); setTimeout(() => t.remove(), 300); }, 2600);
+  }
+
+  async function api(method, path, { token, body, idem } = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    if (idem) headers['Idempotency-Key'] = idem;
+    log(`<span class="verb m">${method}</span> <span class="dim">${path}</span>`);
+    const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    const text = await res.text();
+    let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!res.ok) {
+      const m = (data && data.message) ? data.message : res.statusText;
+      log(`   <span class="er">✗ ${res.status} — ${m}</span>`);
+      throw new Error(m);
+    }
+    log(`   <span class="ok">✓ ${res.status}</span>`);
+    return data;
+  }
+
+  const anyToken = () => Object.values(state.tokens)[0];
+  const playerById = (id) => state.players.find(p => p.id === id);
+  const userById = (id) => state.users.find(u => u.id === id);
+
+  function setStatus(on) {
+    $('#statusDot').classList.toggle('on', on);
+    $('#statusText').textContent = on ? 'conectado' : 'desconectado';
+  }
+  function setJornada(n) { state.jornada = n; $('#jornada').textContent = n; }
+
+  function unlockFree() {
+    state.seeded = true;
+    $('#freeState').textContent = 'activo';
+    $$('#actions .btn').forEach(b => b.disabled = false);
+    $('#league').disabled = false;
+    $('#compare').disabled = false;
+  }
+
+  // ---------- stepper ----------
+  function renderSteps(activeId) {
+    const cont = $('#steps'); cont.innerHTML = '';
+    STEPS.forEach((s, i) => {
+      const btn = document.createElement('button');
+      const blocked = s.needs && !done.has(s.needs);
+      btn.className = 'step-btn' + (done.has(s.id) ? ' done' : '') + (activeId === s.id ? ' active' : '');
+      btn.disabled = blocked || running || leagueOn;
+      btn.innerHTML = `<span class="step-num">Paso ${i + 1}</span><span class="step-ico">${s.ico}</span><span class="step-title">${s.title}</span>`;
+      btn.onclick = () => runStep(s);
+      cont.appendChild(btn);
+    });
+  }
+
+  // ---------- players ----------
+  const leaderValue = () => { const v = Object.values(state.quotes).map(q => q.value); return v.length ? Math.max(...v) : 1; };
+
+  function renderPlayers() {
+    const cont = $('#players'); if (!state.players.length) return;
+    const lead = leaderValue();
+    cont.innerHTML = '';
+    const ordered = [...state.players].sort((a, b) => (state.quotes[b.id]?.value ?? -1) - (state.quotes[a.id]?.value ?? -1));
+    ordered.forEach((p, i) => {
+      const q = state.quotes[p.id], prev = state.prevQuotes[p.id];
+      const card = document.createElement('div');
+      card.className = 'pcard'; card.dataset.id = p.id;
+      card.style.animationDelay = (i * 55) + 'ms';
+
+      let deltaHtml = '<div class="delta">&nbsp;</div>';
+      if (q && prev != null && q.value !== prev) {
+        const d = q.value - prev, pct = prev ? (d / prev) * 100 : 0, up = d >= 0;
+        deltaHtml = `<div class="delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${fmt(Math.abs(d))} (${up ? '+' : ''}${pct.toFixed(2)}%)</div>`;
+      }
+      const base = state.statsBaseline[p.id] || {};
+      const bg = base.goals != null && p.goals !== base.goals ? 'bumped' : '';
+      const ba = base.assists != null && p.assists !== base.assists ? 'bumped' : '';
+
+      let cmpHtml = '';
+      if (state.compare) {
+        const a = state.compare.PerformanceWeighted[p.id], b = state.compare.PositionAware[p.id];
+        if (a != null && b != null) {
+          const aWin = a >= b;
+          cmpHtml = `<div class="cmp">
+            <div class="chip ${aWin ? 'win' : ''}"><div class="t">Performance</div><div class="v">${fmt(a)}</div></div>
+            <div class="chip ${!aWin ? 'win' : ''}"><div class="t">Position</div><div class="v">${fmt(b)}</div></div>
+          </div>`;
+        }
+      }
+
+      card.innerHTML = `
+        <span class="pos">${p.position || '—'}</span>
+        <div class="league">${p.league}</div>
+        <div class="pname">${shortName(p.name)}</div>
+        <div class="team">${p.team}</div>
+        <div class="value">${q ? fmt(q.value) : '<span class="cur">sin cotizar</span>'}</div>
+        <div class="score">${q ? 'score ' + q.score.toFixed(4) : '&nbsp;'}</div>
+        ${deltaHtml}
+        <div class="bar"><i></i></div>
+        <div class="stats">
+          <span class="stat ${bg}">⚽ <b>${p.goals}</b> goles</span>
+          <span class="stat ${ba}">🅰️ <b>${p.assists}</b> asist.</span>
+          <span class="stat">⭐ <b>${Number(p.rating).toFixed(1)}</b></span>
+        </div>
+        ${cmpHtml}`;
+      if (state.compare) card.classList.add('has-cmp');
+      cont.appendChild(card);
+
+      if (q) {
+        requestAnimationFrame(() => { card.querySelector('.bar > i').style.width = Math.max(6, (q.value / lead) * 100) + '%'; });
+        if (prev != null && q.value !== prev) card.classList.add(q.value >= prev ? 'flash-up' : 'flash-down');
+      }
+    });
+  }
+
+  // ---------- users ----------
+  function renderUsers() {
+    const cont = $('#users'); if (!state.users.length) return;
+    cont.innerHTML = '';
+    state.users.forEach(u => {
+      const pf = state.portfolios[u.id];
+      const card = document.createElement('div'); card.className = 'ucard';
+      let rows = '', pnlHtml = '<span class="badge">sin compras</span>';
+      if (pf && pf.positions.length) {
+        const t = pf.totals, up = t.pnl >= 0;
+        pnlHtml = `<span class="upnl ${up ? 'up' : 'down'}">${up ? '+' : ''}${fmt(t.pnl)} <small style="opacity:.7">(${t.pnlPct.toFixed(2)}%)</small></span>`;
+        rows = '<table><tr><th>Jugador</th><th>Tok</th><th>Compra</th><th>Actual</th><th>P&amp;L</th></tr>' +
+          pf.positions.map(pos => {
+            const u2 = pos.pnl >= 0;
+            return `<tr><td>${shortName(pos.playerName)}</td><td>${pos.tokens}</td><td>${fmt(pos.avgBuyPrice)}</td><td>${fmt(pos.currentPrice)}</td><td class="pos-pnl ${u2 ? 'up' : 'down'}">${u2 ? '+' : ''}${fmt(pos.pnl)}</td></tr>`;
+          }).join('') + '</table>';
+      }
+      card.innerHTML = `<div class="uhead"><span class="uemail">👤 ${userShort(u.email)}</span>${pnlHtml}</div>${rows}`;
+      cont.appendChild(card);
+    });
+  }
+
+  // ---------- order book (dos lados) ----------
+  function obRow(o, kind, hitId) {
+    const who = userById(o.userId);
+    const player = playerById(o.playerId);
+    const rem = o.remainingTokens ?? o.tokens;
+    const verb = kind === 'bid' ? 'compra' : 'vende';
+    return `<div class="ob-row ${kind}${hitId && o._id === hitId ? ' hit' : ''}">
+      <div class="who">${verb} <b>${who ? userShort(who.email) : '???'}</b><br><span>${player ? shortName(player.name) : '???'}</span></div>
+      <div class="qty"><b>${rem}</b> tok<br>@ ${fmt(o.pricePerToken)}</div>
+    </div>`;
+  }
+  function renderBook(hitId) {
+    const bids = state.bids.map(o => obRow(o, 'bid', hitId)).join('') || '<div class="ob-empty">sin compras pendientes</div>';
+    const asks = state.sellPosts.map(o => obRow(o, 'ask', hitId)).join('') || '<div class="ob-empty">sin ventas activas</div>';
+    $('#book').innerHTML = `
+      <div class="ob-col bids"><h3>🟢 Compras (bids)</h3><div class="ob-list">${bids}</div></div>
+      <div class="ob-col asks"><h3>🟠 Ventas (asks)</h3><div class="ob-list">${asks}</div></div>`;
+  }
+
+  // ---------- data refresh ----------
+  async function loginAll() {
+    for (const u of state.users) {
+      const t = await api('POST', '/auth/login', { body: { email: u.email, password: u.password } });
+      state.tokens[u.email] = t.accessToken;
+    }
+    setStatus(true);
+  }
+  async function refreshQuotes() {
+    const ranking = await api('GET', '/players/ranking?limit=50', { token: anyToken() });
+    const ids = new Set(state.players.map(p => p.id));
+    ranking.forEach(e => { if (e.quote && ids.has(e.player._id)) state.quotes[e.player._id] = { value: e.quote.value, score: e.quote.score }; });
+  }
+  async function refreshPortfolios() {
+    for (const u of state.users) state.portfolios[u.id] = await api('GET', '/me/portfolio', { token: state.tokens[u.email] });
+    renderUsers();
+  }
+  async function refreshBook(hitId) {
+    const tok = anyToken();
+    const [sells, bids] = await Promise.all([
+      api('GET', '/orders/sell-posts', { token: tok }),
+      api('GET', '/orders/bids', { token: tok }),
+    ]);
+    state.sellPosts = sells; state.bids = bids;
+    renderBook(hitId);
+  }
+  async function recalc(strategy) {
+    const r = await api('POST', '/quotes/recalculate', { token: anyToken(), body: { strategy } });
+    await refreshQuotes();
+    return r;
+  }
+  function snapshotPrev() { state.prevQuotes = {}; Object.entries(state.quotes).forEach(([id, q]) => state.prevQuotes[id] = q.value); }
+
+  // ---------- guided steps ----------
+  async function stepReset() {
+    const data = await api('POST', '/demo/reset');
+    Object.assign(state, { players: data.players, users: data.users, tokens: {}, quotes: {}, prevQuotes: {}, portfolios: {}, sellPosts: [], bids: [], compare: null });
+    state.statsBaseline = {};
+    state.players.forEach(p => state.statsBaseline[p.id] = { goals: p.goals, assists: p.assists });
+    setJornada(0);
+    await loginAll();
+    log(`   <span class="dim">→ ${state.players.length} jugadores y ${state.users.length} inversores listos</span>`);
+    renderPlayers(); renderUsers(); renderBook();
+    toast('🌱 Mercado sembrado: 5 jugadores, 4 inversores', 'sys');
+  }
+  async function stepInitialQuote() {
+    const r = await recalc($('#strategy').value);
+    $('#stratTag').textContent = `· ${r.strategy} v${r.version}`;
+    log(`   <span class="dim">→ ${r.quotesCreated} cotizaciones · ${r.strategy}</span>`);
+    renderPlayers();
+    unlockFree();
+    toast('📈 Cotización inicial lista', 'sys');
+  }
+  async function stepBuy() {
+    for (let i = 0; i < state.users.length; i++) {
+      const u = state.users[i];
+      for (const [idx, tokens] of Object.entries(BUY_PLAN[i])) {
+        const player = state.players[Number(idx)];
+        const r = await api('POST', '/orders/buy', { token: state.tokens[u.email], idem: `demo-${u.id}-${player.id}`, body: { playerId: player.id, tokens } });
+        log(`   <span class="dim">→ ${userShort(u.email)} compró ${tokens}× ${shortName(player.name)} @ ${fmt(r.order.pricePerToken)} (${r.source})</span>`);
+        await refreshPortfolios();
+        await sleep(180);
+      }
+    }
+    toast('🛒 Compras iniciales hechas', 'sys');
+  }
+  async function stepAdvance() {
+    const data = await api('POST', '/demo/advance-time');
+    state.players = data.players;
+    log(`   <span class="dim">→ stats actualizadas (mid-season)</span>`);
+    renderPlayers();
+    toast('⏱️ Pasó el tiempo: nuevas estadísticas', 'warn');
+  }
+  async function stepRecalc() {
+    snapshotPrev();
+    const r = await recalc($('#strategy').value);
+    log(`   <span class="dim">→ ${r.quotesCreated} cotizaciones nuevas</span>`);
+    renderPlayers(); await refreshPortfolios();
+    toast('♻️ Cotizaciones recalculadas', 'sys');
+  }
+  async function stepFinal() {
+    await refreshBook();
+    const ranking = await api('GET', '/players/ranking?limit=10', { token: anyToken() });
+    const ids = new Set(state.players.map(p => p.id));
+    const top = ranking.filter(e => ids.has(e.player._id)).slice(0, 5);
+    log('   <span class="ok">🏆 Ranking:</span>');
+    top.forEach((e, i) => log(`   <span class="dim">${i + 1}. ${shortName(e.player.name)} — ${fmt(e.quote?.value ?? 0)}</span>`));
+    await refreshPortfolios(); renderPlayers();
+    toast('🏆 ' + (top[0] ? shortName(top[0].player.name) + ' lidera el mercado' : 'Ranking listo'), 'sys');
+  }
+
+  // ---------- free / P2P actions ----------
+  async function actP2P() {
+    await refreshPortfolios();
+    const sellers = state.users.filter(u => (state.portfolios[u.id]?.positions || []).some(p => p.tokens >= 2));
+    if (!sellers.length) { toast('Nadie tiene tokens suficientes para vender', 'warn'); return; }
+    const seller = pick(sellers);
+    const pos = pick(state.portfolios[seller.id].positions.filter(p => p.tokens >= 2));
+    const tokens = rnd(1, Math.min(3, pos.tokens - 1));
+    const playerId = pos.playerId;
+
+    const sell = await api('POST', '/orders/sell', { token: state.tokens[seller.email], body: { playerId, tokens } });
+    log(`   <span class="p2p">→ ${userShort(seller.email)} publicó venta de ${tokens}× ${shortName(pos.playerName)}</span>`);
+    toast(`📤 ${userShort(seller.email)} vende ${tokens}× ${shortName(pos.playerName)}`, 'p2p');
+    await refreshBook(sell._id);
+    await sleep(500);
+
+    // un comprador distinto matchea esa orden → P2P real
+    const buyer = pick(state.users.filter(u => u.id !== seller.id));
+    const r = await api('POST', '/orders/buy', { token: state.tokens[buyer.email], body: { playerId, tokens, sellOrderId: sell._id } });
+    log(`   <span class="p2p">→ ${userShort(buyer.email)} compró ${tokens}× ${shortName(pos.playerName)} a ${userShort(seller.email)} <b>[${r.source}]</b></span>`);
+    toast(`🤝 P2P: ${userShort(buyer.email)} ← ${userShort(seller.email)} (${shortName(pos.playerName)})`, 'p2p');
+    await refreshBook(sell._id);
+    await refreshPortfolios();
+  }
+
+  async function actSell() {
+    await refreshPortfolios();
+    const sellers = state.users.filter(u => (state.portfolios[u.id]?.positions || []).some(p => p.tokens >= 2));
+    if (!sellers.length) { toast('Nadie tiene tokens para vender', 'warn'); return; }
+    const seller = pick(sellers);
+    const pos = pick(state.portfolios[seller.id].positions.filter(p => p.tokens >= 2));
+    const tokens = rnd(1, Math.min(3, pos.tokens - 1));
+    const sell = await api('POST', '/orders/sell', { token: state.tokens[seller.email], body: { playerId: pos.playerId, tokens } });
+    toast(`📤 ${userShort(seller.email)} puso en venta ${tokens}× ${shortName(pos.playerName)}`, 'p2p');
+    await refreshBook(sell._id); await refreshPortfolios();
+  }
+
+  async function actBid() {
+    const buyer = pick(state.users);
+    const player = pick(state.players);
+    const tokens = rnd(1, 4);
+    const r = await api('POST', '/orders/bid', { token: state.tokens[buyer.email], body: { playerId: player.id, tokens } });
+    const rem = r.order.remainingTokens ?? 0;
+    if (r.source === 'p2p' && rem === 0) {
+      log(`   <span class="p2p">→ ${userShort(buyer.email)} compró ${r.filled}× ${shortName(player.name)} (match inmediato)</span>`);
+      toast(`🤝 ${userShort(buyer.email)} matcheó ${r.filled}× ${shortName(player.name)}`, 'p2p');
+    } else if (r.filled > 0) {
+      toast(`🤝 ${userShort(buyer.email)} llenó ${r.filled}, quedan ${rem}× ${shortName(player.name)} pendientes`, 'p2p');
+    } else {
+      log(`   <span class="p2p">→ ${userShort(buyer.email)} dejó orden de compra pendiente: ${tokens}× ${shortName(player.name)}</span>`);
+      toast(`📥 ${userShort(buyer.email)} quiere ${tokens}× ${shortName(player.name)} (pendiente)`, 'p2p');
+    }
+    await refreshBook(r.order._id); await refreshPortfolios();
+  }
+
+  async function actSystem() {
+    const sellingIds = new Set(state.sellPosts.map(o => o.playerId));
+    const candidates = state.players.filter(p => !sellingIds.has(p.id));
+    const player = pick(candidates.length ? candidates : state.players);
+    const buyer = pick(state.users);
+    const tokens = rnd(1, 4);
+    const r = await api('POST', '/orders/buy', { token: state.tokens[buyer.email], idem: `sys-${++idemCounter}`, body: { playerId: player.id, tokens } });
+    log(`   <span class="dim">→ ${userShort(buyer.email)} compró ${tokens}× ${shortName(player.name)} <b>[${r.source}]</b></span>`);
+    toast(`🏦 ${userShort(buyer.email)} compró ${tokens}× ${shortName(player.name)} (${r.source})`, 'sys');
+    await refreshPortfolios(); await refreshBook();
+  }
+
+  async function actJornada() {
+    const data = await api('POST', '/demo/advance-time');
+    state.players = data.players;
+    renderPlayers();
+    toast('⏱️ Nueva jornada: stats actualizadas', 'warn');
+    await sleep(450);
+    snapshotPrev();
+    const r = await recalc($('#strategy').value);
+    $('#stratTag').textContent = `· ${r.strategy} v${r.version}`;
+    renderPlayers(); await refreshPortfolios();
+    setJornada(state.jornada + 1);
+    toast('♻️ Cotizaciones recalculadas', 'sys');
+  }
+
+  // ---------- comparar estrategias ----------
+  async function compareStrategies() {
+    if (busy()) return; running = true; renderSteps();
+    try {
+      toast('⚖️ Calculando ambas estrategias…', 'sys');
+      const cmp = {};
+      for (const strat of ['PerformanceWeighted', 'PositionAware']) {
+        await recalc(strat);
+        cmp[strat] = {};
+        state.players.forEach(p => { if (state.quotes[p.id]) cmp[strat][p.id] = state.quotes[p.id].value; });
+        await sleep(300);
+      }
+      state.compare = cmp;
+      // dejar el mercado en la estrategia seleccionada
+      await recalc($('#strategy').value);
+      renderPlayers(); await refreshPortfolios();
+      toast('⚖️ Comparación lista: PositionAware pondera por posición (DF/MF/GK distinto a FW)', 'warn');
+      log('   <span class="dim">→ comparación PerformanceWeighted vs PositionAware en cada card</span>');
+    } catch (e) { log(`<span class="er">● comparar falló: ${e.message}</span>`); }
+    finally { running = false; renderSteps(); }
+  }
+
+  // ---------- runner ----------
+  const busy = () => running || leagueOn;
+  async function runStep(step) {
+    if (busy()) return; running = true; renderSteps(step.id);
+    try { await step.fn(); done.add(step.id); log(`<span class="ok">● «${step.title}» ✓</span>`, 'dim'); }
+    catch (e) { log(`<span class="er">● falló «${step.title}»: ${e.message}</span>`); toast('✗ ' + e.message, 'warn'); }
+    finally { running = false; renderSteps(); }
+  }
+  async function runAll() {
+    if (busy()) return;
+    $('#runAll').disabled = true;
+    for (const s of STEPS) { await runStep(s); await sleep(650); }
+    $('#runAll').disabled = false;
+  }
+
+  async function runAction(act) {
+    if (busy()) return; running = true; renderSteps(); $$('#actions .btn').forEach(b => b.disabled = true);
+    try {
+      if (act === 'p2p') await actP2P();
+      else if (act === 'sys') await actSystem();
+      else if (act === 'sell') await actSell();
+      else if (act === 'bid') await actBid();
+      else if (act === 'jornada') await actJornada();
+    } catch (e) { log(`<span class="er">● acción falló: ${e.message}</span>`); toast('✗ ' + e.message, 'warn'); }
+    finally { running = false; renderSteps(); if (state.seeded && !leagueOn) $$('#actions .btn').forEach(b => b.disabled = false); }
+  }
+
+  // ---------- liga en vivo (loop recursivo) ----------
+  async function leagueTick() {
+    if (!leagueOn) return;
+    try {
+      // 1) pasa una jornada + recalcula
+      const data = await api('POST', '/demo/advance-time');
+      state.players = data.players; renderPlayers();
+      await sleep(400);
+      snapshotPrev();
+      const r = await recalc($('#strategy').value);
+      $('#stratTag').textContent = `· ${r.strategy} v${r.version}`;
+      renderPlayers();
+      setJornada(state.jornada + 1);
+      await sleep(400);
+      // 2) trading solo-P2P: se alternan órdenes de compra y venta (se cruzan y matchean)
+      if (state.jornada % 2 === 0) { await actBid(); await sleep(300); await actSell(); }
+      else { await actSell(); await sleep(300); await actBid(); }
+      await refreshPortfolios();
+    } catch (e) { log(`<span class="er">● liga: ${e.message}</span>`); }
+    if (leagueOn) leagueTimer = setTimeout(leagueTick, 1400 * speed());
+  }
+  function toggleLeague() {
+    leagueOn = !leagueOn;
+    const btn = $('#league');
+    btn.classList.toggle('on', leagueOn);
+    btn.textContent = leagueOn ? '⏹ Detener liga' : '♾️ Liga en vivo';
+    $$('#actions .btn').forEach(b => b.disabled = leagueOn || !state.seeded);
+    $('#runAll').disabled = leagueOn;
+    renderSteps();
+    if (leagueOn) { toast('♾️ Liga en vivo: jornadas y trading automático', 'sys'); leagueTick(); }
+    else { clearTimeout(leagueTimer); toast('⏹ Liga detenida', 'warn'); }
+  }
+
+  // ---------- init ----------
+  $('#runAll').onclick = runAll;
+  $('#league').onclick = toggleLeague;
+  $('#compare').onclick = compareStrategies;
+  $('#strategy').onchange = async () => {
+    if (!state.seeded || busy()) return;
+    running = true; renderSteps();
+    try {
+      snapshotPrev();
+      const r = await recalc($('#strategy').value);
+      $('#stratTag').textContent = `· ${r.strategy} v${r.version}`;
+      renderPlayers(); await refreshPortfolios();
+      toast(`🧮 Estrategia → ${r.strategy}: todo recalculado`, 'sys');
+    } catch (e) { log(`<span class="er">● ${e.message}</span>`); }
+    finally { running = false; renderSteps(); }
+  };
+  $$('#actions .btn').forEach(b => b.onclick = () => runAction(b.dataset.act));
+  renderSteps();
+  fetch('/').then(r => { if (r.ok) log('<span class="dim">› servidor accesible. ¡A jugar!</span>'); })
+            .catch(() => log('<span class="er">› no se pudo contactar al servidor.</span>'));
+})();
+</script>
+</body>
+</html>
