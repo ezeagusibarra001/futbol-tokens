@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { buy, sell } from '../../order.service';
+import { buy, createSellPost, cancelSellPost } from '../../order.service';
 import { Holding } from '../../holding.model';
 import { Order } from '../../order.model';
 import * as marketService from '../../market.service';
@@ -42,41 +42,51 @@ const mockHoldingFindOne = (returnValue: unknown) => {
 
 const mockOrderFindOne = (returnValue: unknown) => {
   jest.spyOn(Order, 'findOne').mockReturnValueOnce({
-    session: () => ({ exec: () => Promise.resolve(returnValue) }),
+    exec: () => Promise.resolve(returnValue),
   } as unknown as ReturnType<typeof Order.findOne>);
 };
 
+const mockOrderFind = (returnValue: unknown) => {
+  jest.spyOn(Order, 'find').mockReturnValueOnce({
+    sort: () => ({ lean: () => ({ exec: () => Promise.resolve(returnValue) }) }),
+  } as unknown as ReturnType<typeof Order.find>);
+};
+
 describe('order.service - validation', () => {
-  it('rejects invalid userId', async () => {
+  it('rejects invalid userId on buy', async () => {
     await expect(buy('not-an-id', playerId.toString(), 5)).rejects.toMatchObject({ status: 400 });
   });
 
-  it('rejects non-positive tokens', async () => {
+  it('rejects non-positive tokens on buy', async () => {
     await expect(buy(userId.toString(), playerId.toString(), 0)).rejects.toMatchObject({ status: 400 });
     await expect(buy(userId.toString(), playerId.toString(), 1.5)).rejects.toMatchObject({ status: 400 });
   });
 
-  it('throws 404 when player does not exist', async () => {
+  it('throws 404 when player does not exist on buyFromSuperuser path', async () => {
     (playerRepo.findPlayerById as jest.Mock).mockResolvedValue(null);
+    mockOrderFind([]);
     await expect(buy(userId.toString(), playerId.toString(), 5)).rejects.toMatchObject({ status: 404 });
   });
 
-  it('forbids superuser trading with itself', async () => {
+  it('forbids superuser buying from itself', async () => {
     setBasics();
+    mockOrderFind([]);
     await expect(buy(suId.toString(), playerId.toString(), 1)).rejects.toMatchObject({ status: 400 });
   });
 });
 
-describe('order.service - BUY', () => {
+describe('order.service - BUY from superuser (no sell posts)', () => {
   it('creates an order, decrements superuser, credits buyer (new holding)', async () => {
     setBasics(10);
+    mockOrderFind([]);
     mockHoldingFindOneAndUpdate({ _id: 'h-su', tokens: 99 });
     mockHoldingFindOne(null);
     jest.spyOn(Holding, 'create').mockResolvedValueOnce([{}] as never);
     jest.spyOn(Order, 'create').mockResolvedValueOnce([{ _id: 'ord-1', side: 'BUY' }] as never);
 
-    const order = await buy(userId.toString(), playerId.toString(), 1);
-    expect(order).toMatchObject({ side: 'BUY' });
+    const result = await buy(userId.toString(), playerId.toString(), 1);
+    expect(result.source).toBe('superuser');
+    expect(result.order).toMatchObject({ side: 'BUY' });
     expect(Holding.findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ tokens: { $gte: 1 } }),
       { $inc: { tokens: -1 } },
@@ -90,6 +100,7 @@ describe('order.service - BUY', () => {
 
   it('recomputes avg price when buyer already holds tokens', async () => {
     setBasics(20);
+    mockOrderFind([]);
     mockHoldingFindOneAndUpdate({ _id: 'h-su', tokens: 90 });
     const existing = { tokens: 10, avgBuyPrice: 5, save: jest.fn().mockResolvedValue(undefined) };
     mockHoldingFindOne(existing);
@@ -98,13 +109,13 @@ describe('order.service - BUY', () => {
     await buy(userId.toString(), playerId.toString(), 10);
 
     expect(existing.tokens).toBe(20);
-    // newAvg = (5*10 + 20*10) / 20 = 12.5
     expect(existing.avgBuyPrice).toBeCloseTo(12.5, 5);
     expect(existing.save).toHaveBeenCalled();
   });
 
   it('throws 409 when superuser has no stock', async () => {
     setBasics();
+    mockOrderFind([]);
     mockHoldingFindOneAndUpdate(null);
     await expect(buy(userId.toString(), playerId.toString(), 200)).rejects.toMatchObject({ status: 409 });
   });
@@ -113,29 +124,99 @@ describe('order.service - BUY', () => {
     setBasics();
     const existing = { _id: 'pre' };
     mockOrderFindOne(existing);
-    const got = await buy(userId.toString(), playerId.toString(), 1, 'idem-1');
-    expect(got).toBe(existing);
+    const result = await buy(userId.toString(), playerId.toString(), 1, 'idem-1');
+    expect(result.source).toBe('superuser');
+    expect(result.order).toBe(existing);
     expect(Holding.findOneAndUpdate).not.toHaveBeenCalled();
   });
 });
 
-describe('order.service - SELL', () => {
-  it('debits seller and credits superuser', async () => {
-    setBasics(8);
-    mockHoldingFindOneAndUpdate({ _id: 'h-user', tokens: 5 });
+describe('order.service - BUY with sellOrderId', () => {
+  it('throws when sellOrderId is invalid', async () => {
+    await expect(buy(userId.toString(), playerId.toString(), 5, undefined, 'bad-id')).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('order.service - createSellPost', () => {
+  it('creates a sell post, moves tokens from seller to superuser escrow', async () => {
+    setBasics(15);
+    mockHoldingFindOneAndUpdate({ _id: 'h-user', tokens: 7 });
     const suHolding = { tokens: 100, save: jest.fn().mockResolvedValue(undefined) };
     mockHoldingFindOne(suHolding);
-    jest.spyOn(Order, 'create').mockResolvedValueOnce([{ _id: 'o', side: 'SELL' }] as never);
+    jest.spyOn(Order, 'create').mockResolvedValueOnce([{ _id: 'sell-1', side: 'SELL', status: 'ACTIVE' }] as never);
 
-    const order = await sell(userId.toString(), playerId.toString(), 3);
-    expect(order).toMatchObject({ side: 'SELL' });
+    const order = await createSellPost(userId.toString(), playerId.toString(), 3);
+    expect(order).toMatchObject({ side: 'SELL', status: 'ACTIVE' });
     expect(suHolding.tokens).toBe(103);
     expect(suHolding.save).toHaveBeenCalled();
+    expect(Holding.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: userId, tokens: { $gte: 3 } }),
+      { $inc: { tokens: -3 } },
+      expect.anything()
+    );
   });
 
-  it('throws 409 when seller has not enough tokens', async () => {
+  it('throws 409 when seller has insufficient tokens', async () => {
     setBasics();
     mockHoldingFindOneAndUpdate(null);
-    await expect(sell(userId.toString(), playerId.toString(), 5)).rejects.toMatchObject({ status: 409 });
+    await expect(createSellPost(userId.toString(), playerId.toString(), 5)).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('forbids superuser from creating sell posts', async () => {
+    setBasics();
+    await expect(createSellPost(suId.toString(), playerId.toString(), 1)).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+const mockFindOneReturn = (returnValue: unknown) => ({
+  session: () => ({ exec: () => Promise.resolve(returnValue) }),
+  exec: () => Promise.resolve(returnValue),
+});
+
+describe('order.service - cancelSellPost', () => {
+  it('cancels a sell post and returns tokens from escrow', async () => {
+    const sellOrderId = new Types.ObjectId();
+    const sellOrder = {
+      _id: sellOrderId,
+      userId,
+      playerId,
+      side: 'SELL' as const,
+      status: 'ACTIVE' as const,
+      tokens: 10,
+      remainingTokens: 10,
+      pricePerToken: 15,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+
+    jest.spyOn(Order, 'findOne').mockReturnValueOnce(mockFindOneReturn(sellOrder) as unknown as ReturnType<typeof Order.findOne>);
+    mockHoldingFindOneAndUpdate({ _id: 'h-su', tokens: 90 });
+    const userHolding = { tokens: 5, save: jest.fn().mockResolvedValue(undefined) };
+    mockHoldingFindOne(userHolding);
+
+    const cancelled = await cancelSellPost(userId.toString(), sellOrderId.toString());
+    expect(cancelled.status).toBe('CANCELLED');
+    expect(cancelled.remainingTokens).toBe(0);
+    expect(userHolding.tokens).toBe(15);
+    expect(userHolding.save).toHaveBeenCalled();
+  });
+
+  it('throws 403 when not the owner', async () => {
+    const sellOrderId = new Types.ObjectId();
+    const otherUserId = new Types.ObjectId();
+    jest.spyOn(Order, 'findOne').mockReturnValueOnce(mockFindOneReturn({
+      _id: sellOrderId,
+      userId: otherUserId,
+      playerId,
+      side: 'SELL',
+      status: 'ACTIVE',
+      tokens: 10,
+      remainingTokens: 10,
+    }) as unknown as ReturnType<typeof Order.findOne>);
+    await expect(cancelSellPost(userId.toString(), sellOrderId.toString())).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('throws 404 when sell order not found', async () => {
+    jest.spyOn(Order, 'findOne').mockReturnValueOnce(mockFindOneReturn(null) as unknown as ReturnType<typeof Order.findOne>);
+    await expect(cancelSellPost(userId.toString(), new Types.ObjectId().toString())).rejects.toMatchObject({ status: 404 });
   });
 });

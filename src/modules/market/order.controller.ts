@@ -1,29 +1,66 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../auth/auth.middleware';
-import { buy, sell } from './order.service';
+import { buy, createSellPost, cancelSellPost, getSellPosts } from './order.service';
+import { tokenTradesTotal } from '../monitor/monitor.service';
 
 const getUserId = (req: AuthRequest): string | null => req.userId ?? null;
 
-const buildHandler = (action: typeof buy) =>
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = getUserId(req);
-      if (!userId) {
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-      }
-      const { playerId, tokens } = req.body as { playerId?: string; tokens?: number };
-      if (!playerId || tokens == null) {
-        res.status(400).json({ message: 'playerId and tokens are required' });
-        return;
-      }
-      const idempotencyKey = req.header('Idempotency-Key') ?? undefined;
-      const order = await action(userId, playerId, Number(tokens), idempotencyKey);
-      res.status(201).json(order);
-    } catch (err) {
-      next(err);
+export const buyHandler = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
+    const { playerId, tokens, sellOrderId } = req.body as { playerId?: string; tokens?: number; sellOrderId?: string };
+    if (!playerId || tokens == null) {
+      res.status(400).json({ message: 'playerId and tokens are required' });
+      return;
     }
-  };
+    const idempotencyKey = req.header('Idempotency-Key') ?? undefined;
+    const result = await buy(userId, playerId, Number(tokens), idempotencyKey, sellOrderId);
+    res.status(201).json(result);
 
-export const buyHandler = buildHandler(buy);
-export const sellHandler = buildHandler(sell);
+    tokenTradesTotal.inc({ side: 'buy', player_id: playerId }, Number(tokens));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const createSellPostHandler = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
+    const { playerId, tokens } = req.body as { playerId?: string; tokens?: number };
+    if (!playerId || tokens == null) {
+      res.status(400).json({ message: 'playerId and tokens are required' });
+      return;
+    }
+    const order = await createSellPost(userId, playerId, Number(tokens));
+    res.status(201).json(order);
+
+    tokenTradesTotal.inc({ side: 'sell', player_id: playerId }, Number(tokens));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const cancelSellPostHandler = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
+    const { id } = req.params as { id?: string };
+    if (!id) { res.status(400).json({ message: 'sellOrderId param is required' }); return; }
+    const order = await cancelSellPost(userId, id);
+    res.json(order);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getSellPostsHandler = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const playerId = req.query.playerId as string | undefined;
+    const posts = await getSellPosts(playerId);
+    res.json(posts);
+  } catch (err) {
+    next(err);
+  }
+};

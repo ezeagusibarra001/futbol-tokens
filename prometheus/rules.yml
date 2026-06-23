@@ -1,0 +1,59 @@
+groups:
+  - name: futbol-tokens-recording
+    interval: 15s
+    rules:
+      - record: job:http_requests_total:rate1m
+        expr: sum(rate(http_requests_total[1m])) by (job)
+      - record: job:http_errors_total:rate1m
+        expr: sum(rate(http_errors_total[1m])) by (job)
+      - record: job:http_errors_ratio:rate1m
+        expr: |
+          sum(rate(http_errors_total[1m])) by (job)
+          /
+          sum(rate(http_requests_total[1m])) by (job)
+      - record: job:token_trades_total:rate1m
+        expr: sum(rate(token_trades_total[1m])) by (job, side)
+
+  - name: futbol-tokens-alerts
+    interval: 15s
+    rules:
+      - alert: HighErrorRate
+        expr: job:http_errors_ratio:rate1m > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'HTTP error rate above 5% for 2 minutes'
+          description: 'Error rate is {{ $value | humanizePercentage }} on {{ $labels.job }}'
+      - alert: InstanceDown
+        expr: up{job="futbol-tokens-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Futbol Tokens API is down'
+          description: 'The API instance {{ $labels.instance }} has been unreachable for 1 minute'
+      - alert: HighEventLoopLag
+        expr: nodejs_event_loop_lag_seconds > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Event loop lag above 1s'
+          description: 'Event loop lag is {{ $value }}s on {{ $labels.job }}'
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 500 * 1024 * 1024
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Memory usage above 500 MB'
+          description: 'RSS memory is {{ $value | humanize1024 }} on {{ $labels.job }}'
+      - alert: HighHeapUsage
+        expr: (nodejs_heap_size_bytes{space="used"} / nodejs_heap_size_bytes{space="total"}) > 0.9
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Heap usage above 90%'
+          description: 'Heap usage is {{ $value | humanizePercentage }} on {{ $labels.job }}'

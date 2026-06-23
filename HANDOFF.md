@@ -5,8 +5,8 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 > **Convención**: marcar `[x]` cuando se completa, dejar `[ ]` si está pendiente, `[~]` si está en progreso. Incluir una línea de "Notas" debajo de cada paso si hay decisiones tomadas o cosas a revisar.
 
 ## Última actualización
-- **Fecha**: 2026-06-03
-- **Última sesión hizo**: Seed de datos demo (5 jugadores, quotes iniciales, superuser, demo user) al bootear con `SEED_ON_BOOT=true`. Fix: `idempotencyKey: undefined` convertido a `null` por Mongoose causaba E11000 duplicate key en orders. Fix: `clearDb` cambió de `deleteMany` a `dropCollection`. 184 unit (28 suites) + 57 e2e (5 suites) verdes.
+- **Fecha**: 2026-06-12
+- **Última sesión hizo**: Sistema de sell posts P2P. Se reemplazó el sell directo contra superuser por órdenes de venta visibles (`status: ACTIVE`) que ponen tokens en escrow (superuser). Compra primero busca sell posts activos, luego fallback a superuser. Soporta `sellOrderId` para comprar a un post específico, cancelación de posts propios, y endpoint `GET /orders/sell-posts?playerId=`. 192 unit tests (28 suites) verdes, typecheck limpio.
 
 ## Decisiones tomadas (no re-debatir salvo pedido del usuario)
 - **Estrategias de valuación**: `PerformanceWeighted` (pesos fijos sobre métricas) + `PositionAware` (pesos según posición — FW prioriza goals/shots, DF prioriza tackles).
@@ -17,8 +17,9 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 - **Player model**: persistido en Mongoose con `league`, `team`, `externalId`, `position`, stats + `minutesPlayed`, `yellowCards`, `redCards`. Índice único `(name, team, league)`.
 - **E2E testing**: `supertest` contra `app` (sin listen), `mongodb-memory-server` con replica set manual (`replSetInitiate` + wait 2s), `jest.e2e.config.ts` separado con `testTimeout: 120000` y `maxWorkers: 1`. Tests co-localizados en `src/modules/<feature>/__tests__/e2e/`.
 - **E11000 fix**: `idempotencyKey: undefined` explícito en `Order.create()` es convertido a `null` por Mongoose, colisionando con el sparse unique index `userId_1_idempotencyKey_1`. Solución: spread condicional `...(idempotencyKey ? { idempotencyKey } : {})` para omitir la key cuando no se provee.
+- **Sell posts P2P**: al crear un sell post los tokens se mueven al superusuario (escrow). Al comprar desde un post, salen del escrow al comprador. El vendedor recupera tokens al cancelar. Precio siempre basado en quote actual (no precio personalizado).
 
-## Plan (11 pasos)
+## Plan (12 pasos)
 
 - [x] **1. Migrar `Player` a Mongoose** con `league/team/externalId/cards/minutes`.
   - Hecho: schema en `src/modules/player/player.model.ts`, nuevo `player.repository.ts`, service refactorizado (`listPlayers`, `getPlayerById`, `syncPlayersFromScrapper`), controller con filtros opcionales + `GET /:id` + `POST /sync`, scrapper devuelve `IPlayer[]` con `league/team` seteados. Tests actualizados (6/6) y typecheck limpio.
@@ -106,3 +107,12 @@ Estado del TP "Valoración de mercado de Jugadores de fútbol". Actualizá este 
 ## Notas para próxima sesión
 - Antes de cualquier paso: `npx tsc --noEmit && npx jest` para confirmar base verde.
 - Cuando arranque el paso 6, levantar Mongo en modo replica set local (`docker-compose` propuesto, todavía no escrito).
+
+- [x] **12. Sell posts P2P — órdenes de venta visibles, compra con prioridad P2P + fallback a superuser**.
+  - `Order` extendido con `status` (`ACTIVE`/`FILLED`/`CANCELLED`) y `remainingTokens` para parcial fills.
+  - `POST /orders/sell` ahora crea un sell post: mueve tokens del vendedor al superuser (escrow), crea Order `{ status: ACTIVE, remainingTokens }`.
+  - `POST /orders/buy` mejorado: acepta `sellOrderId` opcional para comprar directo de un post; si no se provee, busca sell posts activos del jugador con `remainingTokens >= requested`; si hay match, compra P2P; si no, compra del superuser.
+  - `PATCH /orders/sell-posts/:id/cancel` devuelve tokens del escrow al vendedor, marca CANCELLED.
+  - `GET /orders/sell-posts?playerId=` lista sell posts activos (filtro opcional por jugador).
+  - `buy()` ahora retorna `{ source: 'p2p' | 'superuser', order }`.
+  - Tests actualizados: `createSellPost`, `cancelSellPost` (owner/not-found/403), controller handlers. 192 tests unit pasan. Typecheck limpio.

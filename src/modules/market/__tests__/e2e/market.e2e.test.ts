@@ -55,11 +55,12 @@ describe('POST /orders/buy', () => {
       .send({ playerId: player1Id, tokens: 5 })
       .expect(201);
 
-    expect(res.body).toHaveProperty('_id');
-    expect(res.body.side).toBe('BUY');
-    expect(res.body.tokens).toBe(5);
-    expect(res.body).toHaveProperty('total');
-    expect(res.body.total).toBeGreaterThan(0);
+    expect(res.body.source).toBe('superuser');
+    expect(res.body.order).toHaveProperty('_id');
+    expect(res.body.order.side).toBe('BUY');
+    expect(res.body.order.tokens).toBe(5);
+    expect(res.body.order).toHaveProperty('total');
+    expect(res.body.order.total).toBeGreaterThan(0);
   });
 
   it('rejects invalid playerId (400)', async () => {
@@ -89,7 +90,7 @@ describe('POST /orders/buy', () => {
       .send({ playerId: player1Id, tokens: 999 })
       .expect(409);
 
-    expect(res.body.message).toBe('Not enough tokens available');
+    expect(res.body.message).toBe('Not enough tokens available from superuser');
   });
 
   it('is idempotent with Idempotency-Key header', async () => {
@@ -179,7 +180,7 @@ describe('POST /orders/sell', () => {
       .send({ playerId: player1Id, tokens: 999 })
       .expect(409);
 
-    expect(res.body.message).toBe('Insufficient token balance to sell');
+    expect(res.body.message).toBe('Insufficient token balance to create sell post');
   });
 
   it('returns 409 when selling without any holdings', async () => {
@@ -190,10 +191,10 @@ describe('POST /orders/sell', () => {
       .send({ playerId: player1Id, tokens: 1 })
       .expect(409);
 
-    expect(res.body.message).toBe('Insufficient token balance to sell');
+    expect(res.body.message).toBe('Insufficient token balance to create sell post');
   });
 
-  it('is idempotent with Idempotency-Key header on sell', async () => {
+  it('creates a new sell post each time (idempotency-key not used for sell)', async () => {
     const idemKey = 'idem-sell-001';
     const first = await request(getApp())
       .post('/orders/sell')
@@ -209,6 +210,6 @@ describe('POST /orders/sell', () => {
       .send({ playerId: player1Id, tokens: 2 })
       .expect(201);
 
-    expect(second.body._id).toBe(first.body._id);
+    expect(second.body._id).not.toBe(first.body._id);
   });
 });
