@@ -1644,3 +1644,14 @@
 {"timestamp":"2026-06-23T13:34:05.961Z","user":"6a3a8ad9734fef3f4fd0ed56","operation":"GET /portfolio","parameters":{},"executionTime":8,"status":200}
 {"timestamp":"2026-06-23T13:34:05.978Z","user":"6a3a8ad9734fef3f4fd0ed57","operation":"GET /portfolio","parameters":{},"executionTime":5,"status":200}
 {"timestamp":"2026-06-23T13:34:05.991Z","user":"6a3a8ad9734fef3f4fd0ed58","operation":"GET /portfolio","parameters":{},"executionTime":5,"status":200}
+{"timestamp":"2026-06-23T13:34:06.019Z","user":"6a3a8ad9734fef3f4fd0ed56","operation":"POST /sell","parameters":{"playerId":"6a3a8ad916deff78c8451c64","tokens":1},"executionTime":14,"status":201}
+{"timestamp":"2026-06-23T13:34:06.031Z","user":"6a3a8ad9734fef3f4fd0ed55","operation":"GET /sell-posts","parameters":{},"executionTime":2,"status":304}
+{"timestamp":"2026-06-23T13:34:06.035Z","user":"6a3a8ad9734fef3f4fd0ed55","operation":"GET /bids","parameters":{},"executionTime":2,"status":200}
+{"timestamp":"2026-06-23T13:34:06.051Z","user":"6a3a8ad9734fef3f4fd0ed55","operation":"GET /portfolio","parameters":{},"executionTime":3,"status":200}
+{"timestamp":"2026-06-23T13:34:06.064Z","user":"6a3a8ad9734fef3f4fd0ed56","operation":"GET /portfolio","parameters":{},"executionTime":4,"status":200}
+{"timestamp":"2026-06-23T13:34:06.078Z","user":"6a3a8ad9734fef3f4fd0ed57","operation":"GET /portfolio","parameters":{},"executionTime":4,"status":200}
+{"timestamp":"2026-06-23T13:34:06.091Z","user":"6a3a8ad9734fef3f4fd0ed58","operation":"GET /portfolio","parameters":{},"executionTime":4,"status":200}
+{"timestamp":"2026-06-23T13:34:06.116Z","user":"6a3a8ad9734fef3f4fd0ed55","operation":"GET /portfolio","parameters":{},"executionTime":5,"status":200}
+{"timestamp":"2026-06-23T13:34:06.134Z","user":"6a3a8ad9734fef3f4fd0ed56","operation":"GET /portfolio","parameters":{},"executionTime":5,"status":200}
+{"timestamp":"2026-06-23T13:34:06.150Z","user":"6a3a8ad9734fef3f4fd0ed57","operation":"GET /portfolio","parameters":{},"executionTime":5,"status":200}
+{"timestamp":"2026-06-23T13:34:06.165Z","user":"6a3a8ad9734fef3f4fd0ed58","operation":"GET /portfolio","parameters":{},"executionTime":5,"status":200}
