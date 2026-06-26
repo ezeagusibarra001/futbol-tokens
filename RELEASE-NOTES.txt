@@ -1,0 +1,133 @@
+=====================================================================
+FUTBOL TOKENS — RELEASE NOTES
+Trabajo Práctico: Valoración de mercado de Jugadores de fútbol
+=====================================================================
+
+---------------------------------------------------------------------
+TAG ENTREGA_3_1.0
+---------------------------------------------------------------------
+
+NEW FEATURES (funcionalidades entregadas y funcionando):
+
+* Auth: registro, login y logout con JWT (access + refresh tokens).
+  Blacklist de refresh tokens, middleware de autorización en todas
+  las rutas protegidas.
+
+* Catálogo de jugadores: modelo Mongoose con league, team, position,
+  stats de performance (goals, assists, shots, tackles, etc.),
+  minutesPlayed, yellowCards, redCards. Endpoints GET /players con
+  filtros opcionales por league y team, y GET /players/:id.
+
+* Integración Football-Data.org: sincronización del catálogo desde
+  la API oficial (5 grandes ligas: PL, BL1, PD, SA, FL1) vía
+  POST /players/sync. Tolerancia a fallos: si la liga no trae squad
+  hace fallback por equipo; errores no propagan al proceso.
+
+* Scraping WhoScored: player.scrapper.ts con Puppeteer como fuente
+  alternativa de stats de performance.
+
+* Cotizaciones (Quote): modelo con historial (playerId, value, score,
+  strategyName, at). Dos estrategias de valuación:
+    - PerformanceWeighted: pesos fijos sobre métricas de performance.
+    - PositionAware: pesos diferenciados según posición (FW/MF/DF/GK).
+  Normalización con caps por métrica y penalización por tarjetas.
+  Precio: base (1 crédito) + score * factor de escala (100).
+
+* Endpoints de cotización:
+    - GET /players/:id/quotes?from&to  — historial ordenado desc.
+    - GET /players/ranking?limit       — ranking por última cotización.
+    - POST /quotes/recalculate         — recálculo on-demand con
+      body { strategy?: 'PerformanceWeighted'|'PositionAware' }.
+
+* Mercado: 100 tokens emitidos por jugador al inicio. Superusuario
+  concentra la tenencia inicial. Modelos Holding y Order.
+
+* Compra/venta de tokens (POST /orders/buy y POST /orders/sell) con
+  transacciones MongoDB (replica set). Precio resuelto por última
+  quote o computado on-demand y persistido. Soporte de idempotency
+  key (header Idempotency-Key) para operaciones duplicadas.
+  Cada Order persiste strategyName/Version para auditoría.
+
+* Mercado P2P: sell posts visibles con mecanismo de escrow.
+    - POST /orders/sell crea un sell post: los tokens pasan al
+      superusuario (escrow) y la orden queda ACTIVE.
+    - POST /orders/buy prioriza sell posts activos del jugador;
+      si no hay match compra del superusuario (fallback). Acepta
+      sellOrderId opcional para comprar de un post específico.
+    - PATCH /orders/sell-posts/:id/cancel devuelve tokens del
+      escrow al vendedor y marca la orden CANCELLED.
+    - GET /orders/sell-posts?playerId= lista posts activos.
+    - Respuesta de buy incluye { source: 'p2p' | 'superuser' }.
+
+* Portfolio de usuario:
+    - GET /users/:id/portfolio — posiciones con tokens, avgBuyPrice,
+      currentPrice, currentValue, investedValue, pnl, pnlPct y
+      totales agregados.
+    - GET /users/:id/transactions — historial de órdenes propias.
+    Autorización: solo el dueño puede ver su portfolio (403 si
+    req.userId !== id).
+
+* Scheduler semanal: cron jobs configurables por variables de entorno
+  (SCHEDULER_CRON_RECALC / SCHEDULER_CRON_SYNC). Lunes 03:00
+  recalcula cotizaciones; lunes 04:00 sincroniza catálogo.
+  Se activa con SCHEDULER_ENABLED=true.
+
+* Cache TTL en memoria: cacheo de listPlayers, getPlayerById y
+  getRanking con invalidación automática en sync y recálculo.
+  Arquitectura agnóstica (reemplazable por Redis sin cambios en
+  servicios).
+
+* Logger centralizado (config/logger.ts) con niveles debug/info/warn/
+  error controlados por LOG_LEVEL. Middleware requestLogger
+  (method/path/status/ms) y errorHandler que oculta mensaje en 5xx.
+
+* Demo mode: POST /demo/reset (reinicia DB a estado inicial) y
+  POST /demo/advance-time (avanza el tiempo simulado para pruebas).
+
+* Monitoreo: métricas Prometheus expuestas y dashboard Grafana
+  preconfigurado via docker-compose.
+
+* Audit log: registro de operaciones clave (login, buy, sell,
+  advance-time, recalculate, portfolio) con timestamp y metadata.
+
+* Seed automático al arrancar (SEED_ON_BOOT=true): crea superusuario,
+  5 jugadores demo (uno por liga), quotes iniciales y usuario
+  demo@futbol-tokens.local.
+
+* Tests: 182 unit tests (28 suites) + 57 e2e tests (5 suites) con
+  Jest + ts-jest + supertest + mongodb-memory-server. Cobertura sobre
+  modelos, repositorios, servicios, controllers, middlewares y
+  casos de borde.
+
+* Swagger/OpenAPI disponible en GET /api-docs.
+
+* SonarCloud integrado (sonar-project.properties).
+
+* Docker Compose para MongoDB en modo replica set (puerto 27018).
+
+NOTES (consideraciones especiales):
+
+* Docker Desktop es prerequisito: las transacciones de MongoDB
+  requieren replica set. El docker-compose levanta un nodo single-node
+  en rs0. El compose también incluye Prometheus + Grafana.
+
+* FOOTBALL_DATA_TOKEN es opcional. Sin token la app funciona
+  completamente con los datos sembrados por el seed/demo.
+
+* El scraping de WhoScored (Puppeteer) puede ser lento dependiendo
+  de la red y versión de Chromium disponible. No es necesario para
+  el flujo principal; Football-Data.org es la fuente primaria.
+
+* Los tests e2e usan mongodb-memory-server con initiation manual
+  del replica set (2s de espera post-connect). En máquinas lentas
+  puede ser necesario aumentar el testTimeout en jest.e2e.config.ts.
+
+* El precio de venta en el mercado P2P está basado siempre en la
+  última cotización calculada, no permite precio personalizado por
+  el vendedor.
+
+KNOWN ISSUES (comportamiento diferente al esperado / errores conocidos):
+
+* Ninguno conocido al momento del tag.
+
+=====================================================================
